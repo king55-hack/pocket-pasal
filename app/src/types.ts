@@ -47,6 +47,7 @@ export interface Party {
   type: 'customer' | 'supplier'
   name: string
   phone?: string
+  email?: string
   /** customer: amount they owe us. supplier: amount we owe them. */
   balance: number
   updatedAt?: number
@@ -81,6 +82,12 @@ export interface Invoice {
   payments: Payment[]
   by: string
   refId?: string
+  partyName?: string
+  /** What the customer handed over, and what was given back. */
+  received?: number
+  change?: number
+  /** What this customer owes in total after this bill (baki). */
+  partyBalance?: number
 }
 export interface LedgerRow {
   id: string

@@ -4,6 +4,7 @@ import { useApp } from '../ctx'
 import { db, uid } from '../db'
 import { addCategory, adjustStock, FREE_ITEM_LIMIT, ranked, removeCategory, saveCategory, saveItem } from '../logic'
 import { Photo, Scanner } from '../components'
+import { compressImage, ITEM_PHOTO } from '../images'
 import type { Category, Item, Party } from '../types'
 
 export const PAGE = 40
@@ -73,20 +74,6 @@ export function Items() {
   )
 }
 
-function shrink(file: File, max = 240): Promise<string> {
-  return new Promise((res) => {
-    const img = new Image()
-    img.onload = () => {
-      const k = Math.min(1, max / Math.max(img.width, img.height))
-      const c = document.createElement('canvas')
-      c.width = img.width * k; c.height = img.height * k
-      c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height)
-      res(c.toDataURL('image/jpeg', 0.7))
-    }
-    img.src = URL.createObjectURL(file)
-  })
-}
-
 export function ItemEdit({ id }: { id?: string }) {
   const { t, back, toast, on, s } = useApp()
   const existing = useLiveQuery(() => (id ? db.items.get(id) : undefined), [id])
@@ -95,11 +82,15 @@ export function ItemEdit({ id }: { id?: string }) {
   const [f, setF] = useState<Item | null>(null)
   const [scan, setScan] = useState(false)
   const [adj, setAdj] = useState('')
+  const [photoBusy, setPhotoBusy] = useState(false)
   const [newCat, setNewCat] = useState('')
   const file = useRef<HTMLInputElement>(null)
   const it: Item = f ?? existing ?? { id: uid(), nameNe: '', nameEn: '', price: 0, cost: 0, stock: 0, minStock: 5, unit: 'pcs', vat: s.vatRegistered, sold: 0, active: true }
   if (id && !existing && !f) return <div className="body" />
-  const set = (p: Partial<Item>) => setF({ ...it, ...p })
+  // The photo is shrunk after the person picks it, which takes a moment. Reading the latest values when it finishes keeps what was typed in the meantime.
+  const latest = useRef(it)
+  latest.current = it
+  const set = (p: Partial<Item>) => setF({ ...latest.current, ...p })
   const num = (k: keyof Item) => (e: React.ChangeEvent<HTMLInputElement>) => set({ [k]: e.target.value === '' ? 0 : +e.target.value } as any)
 
   async function save() {
@@ -125,8 +116,8 @@ export function ItemEdit({ id }: { id?: string }) {
   return (
     <div className="body">
       <div className="row">
-        <button className="photo" style={{ width: 80, height: 80, border: 0, cursor: 'pointer' }} onClick={() => file.current?.click()}>{it.photo ? <img src={it.photo} alt="" /> : <span>📷</span>}</button>
-        <input ref={file} type="file" accept="image/*" capture="environment" hidden onChange={async (e) => { const fl = e.target.files?.[0]; if (fl) set({ photo: await shrink(fl) }) }} />
+        <button className="photo" style={{ width: 104, height: 104, border: 0, cursor: 'pointer' }} onClick={() => file.current?.click()}>{photoBusy ? <span>…</span> : it.photo ? <img src={it.photo} alt="" /> : <span>📷</span>}</button>
+        <input ref={file} type="file" accept="image/*" capture="environment" hidden onChange={async (e) => { const fl = e.target.files?.[0]; e.target.value = ''; if (!fl) return; setPhotoBusy(true); try { set({ photo: await compressImage(fl, ITEM_PHOTO) }) } catch { toast(t('फोटो पढ्न सकिएन। अर्को फोटो छान्नुस्।', 'Could not read that photo. Try another.')) } setPhotoBusy(false) }} />
         <div className="g" style={{ flex: 1, display: 'grid', gap: 8 }}>
           <input className="in" placeholder="नाम (नेपाली)" value={it.nameNe} onChange={(e) => set({ nameNe: e.target.value })} />
           <input className="in" placeholder="Name (English)" value={it.nameEn} onChange={(e) => set({ nameEn: e.target.value })} />
@@ -148,7 +139,7 @@ export function ItemEdit({ id }: { id?: string }) {
       {id && (<><div className="h">{t('स्टक मिलाउनुस् (गन्ती / बिग्रेको)', 'Adjust stock (count / damaged)')}</div>
         <div className="row"><input className="in g" inputMode="numeric" placeholder="0" value={adj} onChange={(e) => setAdj(e.target.value)} />
           <button className="btn s" onClick={() => doAdj(1)}>+ {t('थप', 'Add')}</button><button className="btn o s" onClick={() => doAdj(-1)}>− {t('घटा', 'Remove')}</button></div></>)}
-      <button className="btn stick" onClick={save}>{t('सेभ गर्नुस्', 'Save')}</button>
+      <button className="btn stick" disabled={photoBusy} onClick={save}>{t('सेभ गर्नुस्', 'Save')}</button>
       {id && <button className="btn o" onClick={async () => { await saveItem({ ...it, active: false }); toast(t('सामान हटाइयो', 'Item removed')); back() }}>{t('सामान हटाउनुस्', 'Remove item')}</button>}
     </div>
   )

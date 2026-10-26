@@ -4,6 +4,18 @@ import { billRows, drawRows, widthPx } from './escpos'
 import { PROVINCES, SHOP_TYPES } from './data'
 import type { Invoice } from './types'
 
+/** A password or PIN box with an eye button, so the person can see what they typed (and fix a typing mistake). */
+export function PwInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  const { t } = useApp()
+  const [show, setShow] = useState(false)
+  return (
+    <span className="pw">
+      <input {...props} type={show ? 'text' : 'password'} autoComplete={props.autoComplete ?? 'off'} autoCapitalize="off" autoCorrect="off" spellCheck={false} />
+      <button type="button" className="eye" aria-pressed={show} aria-label={show ? t('लुकाउनुस्', 'Hide') : t('देखाउनुस्', 'Show')} title={show ? t('लुकाउनुस्', 'Hide') : t('देखाउनुस्', 'Show')} onClick={() => setShow(!show)} />
+    </span>
+  )
+}
+
 export function Toggle({ on, onChange, label }: { on: boolean; onChange: () => void; label: string }) {
   return (
     <div className="toggle">
@@ -51,36 +63,47 @@ export function Scanner({ onCode, onClose }: { onCode: (c: string) => void; onCl
   useEffect(() => {
     let stop = false
     let stream: MediaStream | null = null
+    let controls: { stop: () => void } | null = null
+    const done = (code: string) => { if (stop) return; stop = true; navigator.vibrate?.(60); onCode(code) }
     ;(async () => {
-      const BD = (window as any).BarcodeDetector
-      if (!BD || !navigator.mediaDevices?.getUserMedia) {
-        setMsg(t('यो फोनको ब्राउजरमा क्यामेरा स्क्यान चल्दैन। कोड टाइप गर्नुस्।', 'Camera scan is not supported in this browser. Type the code instead.'))
-        return
-      }
+      if (!navigator.mediaDevices?.getUserMedia) { setMsg(t('यो ब्राउजरमा क्यामेरा चल्दैन। कोड टाइप गर्नुस्।', 'The camera is not available in this browser. Type the code instead.')); return }
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-        if (vid.current) { vid.current.srcObject = stream; await vid.current.play() }
-        const det = new BD({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'] })
-        const tick = async () => {
-          if (stop || !vid.current) return
-          try {
-            const r = await det.detect(vid.current)
-            if (r[0]?.rawValue) { navigator.vibrate?.(60); onCode(r[0].rawValue); return }
-          } catch { /* keep trying */ }
-          setTimeout(tick, 250)
+        const BD = (window as any).BarcodeDetector
+        if (BD) {
+          // Android Chrome has a built-in reader, which is the fastest.
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+          if (vid.current) { vid.current.srcObject = stream; await vid.current.play() }
+          const det = new BD({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'qr_code'] })
+          const tick = async () => {
+            if (stop || !vid.current) return
+            try { const r = await det.detect(vid.current); if (r[0]?.rawValue) return done(r[0].rawValue) } catch { /* keep trying */ }
+            setTimeout(tick, 200)
+          }
+          tick()
+        } else {
+          // iPhone Safari (and desktop browsers) have no built-in reader, so a reader written in JavaScript is loaded the first time it is needed.
+          const [{ BrowserMultiFormatReader }, { BarcodeFormat, DecodeHintType }] = await Promise.all([import('@zxing/browser'), import('@zxing/library')])
+          const hints = new Map<any, any>()
+          hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.UPC_E, BarcodeFormat.CODE_128, BarcodeFormat.CODE_39, BarcodeFormat.ITF, BarcodeFormat.QR_CODE])
+          hints.set(DecodeHintType.TRY_HARDER, true)
+          const reader = new BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 100 })
+          if (stop) return
+          controls = await reader.decodeFromConstraints({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } }, vid.current!, (res) => { if (res) done(res.getText()) })
         }
-        tick()
-      } catch {
-        setMsg(t('क्यामेरा खोल्न अनुमति चाहिन्छ।', 'Camera permission is needed.'))
+      } catch (e) {
+        const name = (e as { name?: string })?.name
+        setMsg(name === 'NotAllowedError' ? t('क्यामेरा खोल्न अनुमति चाहिन्छ। फोनको सेटिङमा अनुमति दिनुस्।', 'Camera permission is needed. Allow it in the phone settings.')
+          : t('क्यामेरा खुलेन। कोड टाइप गर्नुस्।', 'The camera did not open. Type the code instead.'))
       }
     })()
-    return () => { stop = true; stream?.getTracks().forEach((x) => x.stop()) }
+    return () => { stop = true; try { controls?.stop() } catch { /* already stopped */ } stream?.getTracks().forEach((x) => x.stop()) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   return (
     <div className="note" style={{ borderStyle: 'solid' }}>
-      <video ref={vid} className="scan" muted playsInline />
-      {msg && <div className="mut" style={{ margin: '8px 0' }}>{msg}</div>}
+      <video ref={vid} className="scan" muted playsInline autoPlay />
+      <div className="mut" style={{ margin: '8px 0', fontSize: 13 }}>{t('बारकोड १५-२० सेमी टाढा, उज्यालोमा, सिधा राख्नुस्।', 'Hold the barcode 15-20 cm away, flat and in good light.')}</div>
+      {msg && <div className="note w" style={{ margin: '8px 0' }}>{msg}</div>}
       <div className="row" style={{ marginTop: 8 }}>
         <input className="in g" inputMode="numeric" placeholder={t('बारकोड नम्बर', 'Barcode number')} value={typed} onChange={(e) => setTyped(e.target.value)} />
         <button className="btn s" disabled={!typed} onClick={() => onCode(typed.trim())}>OK</button>

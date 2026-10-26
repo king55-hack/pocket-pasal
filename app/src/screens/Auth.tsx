@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useApp } from '../ctx'
 import { db, kvSet } from '../db'
 import { addCategory, checkSecret, createUser, seedSample } from '../logic'
-import { ShopFields } from '../components'
+import { PwInput, ShopFields } from '../components'
 import { SHOP_TYPES } from '../data'
 import type { User } from '../types'
 import { RestoreFlow } from './Cloud'
@@ -55,8 +55,8 @@ export function Setup() {
         <div className="hero">{t('मालिकको खाता', 'Owner account')}</div>
         <label className="f">{t('तपाईंको नाम', 'Your name')}<input className="in" value={o.name} onChange={(e) => setO({ ...o, name: e.target.value })} /></label>
         <label className="f">{t('इमेल', 'Email')}<input className="in" type="email" value={o.email} onChange={(e) => setO({ ...o, email: e.target.value })} /></label>
-        <label className="f">{t('पासवर्ड', 'Password')}<input className="in" type="password" value={o.pw} onChange={(e) => setO({ ...o, pw: e.target.value })} /></label>
-        <label className="f">{t('पासवर्ड फेरि', 'Repeat password')}<input className="in" type="password" value={o.pw2} onChange={(e) => setO({ ...o, pw2: e.target.value })} /></label>
+        <label className="f">{t('पासवर्ड', 'Password')}<PwInput className="in" value={o.pw} onChange={(e) => setO({ ...o, pw: e.target.value })} /></label>
+        <label className="f">{t('पासवर्ड फेरि', 'Repeat password')}<PwInput className="in" value={o.pw2} onChange={(e) => setO({ ...o, pw2: e.target.value })} /></label>
         <div className="toggle"><span>{f.shopType === 'kirana' ? t('नमुना किराना सामान राख्नुस्', 'Add sample kirana items') : t('यो पसलका सुरुवाती वर्ग बनाउनुस्', 'Create starter categories for this shop')}</span>
           <button className={'sw' + (o.sample ? ' on' : '')} aria-label="sample" onClick={() => setO({ ...o, sample: !o.sample })} /></div>
         <div className="note">{t('इमेल OTP प्रमाणीकरण क्लाउड जोडिएपछि सुरु हुन्छ। अहिले पासवर्ड यही फोनमा सुरक्षित रहन्छ।', 'Email OTP check starts once the cloud is connected. For now the password stays safely on this phone.')}</div>
@@ -98,7 +98,7 @@ export function Login() {
       <div className="mut" style={{ textAlign: 'center', marginTop: -6 }}>Pocket Pasal · {t('लगइन गर्नुस्', 'Log in')}</div>
       {users.length > 1 && <div className="row wrap" style={{ justifyContent: 'center' }}>{users.map((x) => <button key={x.id} className={'pill' + (u?.id === x.id ? ' on' : '')} onClick={() => { setPick(x.id); setErr('') }}>{x.name}{x.role === 'owner' ? ' ★' : ''}</button>)}</div>}
       <label className="f">{u?.role === 'staff' ? 'PIN' : t('पासवर्ड', 'Password')}
-        <input className="in" type="password" inputMode={u?.role === 'staff' ? 'numeric' : 'text'} value={secret} autoFocus
+        <PwInput className="in" inputMode={u?.role === 'staff' ? 'numeric' : 'text'} value={secret} autoFocus
           onChange={(e) => setSecret(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} /></label>
       {err && <div className="note w">{err}</div>}
       <button className="btn" onClick={submit} disabled={!secret}>{t('लगइन', 'Login')}</button>

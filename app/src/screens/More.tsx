@@ -4,7 +4,7 @@ import { useApp } from '../ctx'
 import { db, kvGet, kvSet, queue } from '../db'
 import { authed } from '../api'
 import { createUser, PLANREQ, setPerms, setSecret, STAFF_LIMIT } from '../logic'
-import { ShopFields, Toggle } from '../components'
+import { PwInput, ShopFields, Toggle } from '../components'
 import { btSupported, connectPrinter } from '../escpos'
 import { DEFAULT_PERMS, type Perms, type Plan, type User } from '../types'
 
@@ -50,6 +50,7 @@ export function Settings() {
     ['qr', t('QR भुक्तानी', 'QR payments')], ['returns', t('फिर्ता', 'Returns')], ['purch', t('खरिद र आपूर्तिकर्ता', 'Purchases and suppliers')],
     ['staff', t('कर्मचारी खाता', 'Staff accounts')], ['cctv', t('क्यामेरा (CCTV)', 'CCTV')], ['delivery', t('डेलिभरी', 'Delivery')],
     ['orders', t('अर्डर सूची', 'Order list')], ['alerts', t('स्टक कम सूचना', 'Low-stock alerts')],
+    ['share', t('बिल PDF / इमेल / शेयर पठाउने बटन', 'Bill PDF / email / share buttons')],
   ]
   const flip = (k: string) => {
     if (!s.mod[k] && !can(k)) { go('upgrade', { f: k }); return }
@@ -212,7 +213,7 @@ export function Staff() {
               <div className="h">{t('फिर्ता (return)', 'Returns')}</div>
               <div className="row wrap">{(['off', 'approval', 'direct'] as const).map((k) => <button key={k} className={'pill' + (p.returns === k ? ' on' : '')} onClick={() => setPerms(u.id, { ...p, returns: k })}>{returnsLabel[k]}</button>)}</div>
               <div className="h">PIN</div>
-              <div className="row"><input className="in g" inputMode="numeric" type="password" placeholder={t('नयाँ PIN', 'New PIN')} value={newPin} onChange={(e) => setNewPin(e.target.value)} />
+              <div className="row"><PwInput className="in g" inputMode="numeric" placeholder={t('नयाँ PIN', 'New PIN')} value={newPin} onChange={(e) => setNewPin(e.target.value)} />
                 <button className="btn s" disabled={newPin.length < 4} onClick={async () => { await setSecret(u.id, newPin); setNewPin(''); toast(t('PIN बदलियो', 'PIN changed')) }}>{t('बदल्नुस्', 'Change')}</button></div>
               <button className="btn o" style={{ marginTop: 10 }} onClick={async () => { await db.users.update(u.id, { active: false, updatedAt: Date.now() }); await queue('users', u.id); setOpen('') }}>{t('यो कर्मचारी हटाउनुस्', 'Remove this staff member')}</button>
             </>)}
@@ -220,7 +221,7 @@ export function Staff() {
       })}
       <div className="h">{t('नयाँ कर्मचारी', 'New staff')}</div>
       <input className="in" placeholder={t('नाम', 'Name')} value={name} onChange={(e) => setName(e.target.value)} />
-      <input className="in" inputMode="numeric" type="password" placeholder="PIN" value={pin} onChange={(e) => setPin(e.target.value)} />
+      <PwInput className="in" inputMode="numeric" placeholder="PIN" value={pin} onChange={(e) => setPin(e.target.value)} />
       <button className="btn" disabled={!name.trim() || !pin} onClick={add}>+ {t('थप्नुस्', 'Add')}</button>
       <div className="note">{t('यी अनुमति एपले यही फोनमा लागू गर्छ। फोन आफैँ कर्मचारीको हातमा हुँदा डाटा-फाइल खोल्न जान्ने मान्छेले जोगिन सक्छ, त्यसैले पैसाको सबै अधिकार मालिकले आफैँसँग राख्नुस्।', 'These permissions are enforced by the app on the phone. Someone who knows how to open the phone data files could get around them, so keep money decisions with the owner.')}</div>
     </div>

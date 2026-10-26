@@ -121,6 +121,7 @@ export function billRows(inv: Invoice, s: Settings, lang: 'ne' | 'en', fmt: { m:
     { l: '', rule: true },
     { l: L('बिल नं. ', 'Bill no. ') + fmt.n(inv.no), r: undefined },
     { l: fmt.date(inv.at) },
+    ...(inv.partyName ? [{ l: L('ग्राहक: ', 'Customer: ') + inv.partyName } as Row] : []),
     { l: '', rule: true },
   ]
   for (const l of inv.lines) {
@@ -134,9 +135,14 @@ export function billRows(inv: Invoice, s: Settings, lang: 'ne' | 'en', fmt: { m:
   }
   rows.push({ l: L('जम्मा', 'TOTAL'), r: fmt.m(inv.total), big: true })
   for (const p of inv.payments) {
-    const nm = { cash: L('नगद', 'Cash'), qr: 'QR', card: L('कार्ड', 'Card'), credit: L('उधारो', 'Credit') }[p.method]
+    const nm = { cash: L('नगद', 'Cash'), qr: 'QR', card: L('कार्ड', 'Card'), credit: L('उधारो (बाँकी)', 'On credit (due)') }[p.method]
     rows.push({ l: nm + (p.verified ? '' : L(' (अप्रमाणित)', ' (unverified)')), r: fmt.m(p.amount) })
   }
+  if (inv.received != null && inv.received > 0) {
+    rows.push({ l: L('ग्राहकले दिएको', 'Customer gave'), r: fmt.m(inv.received) })
+    if ((inv.change ?? 0) > 0) rows.push({ l: L('फिर्ता दिएको', 'Change returned'), r: fmt.m(inv.change!), bold: true })
+  }
+  if (inv.partyBalance != null && inv.partyBalance > 0) rows.push({ l: L('जम्मा बाँकी', 'Total due'), r: fmt.m(inv.partyBalance), bold: true })
   rows.push({ l: '', rule: true })
   rows.push({ l: s.billFooter || L('धन्यवाद! फेरि आउनुहोला।', 'Thank you! Visit again.'), center: true })
   return rows

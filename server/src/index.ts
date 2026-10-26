@@ -5,6 +5,7 @@ import { hashPassword, randomHex, safeEqual, sha256, signJwt, verifyJwt } from '
 import { otpMail, sendMail, type Env } from './mail'
 import { sync } from './sync'
 import { pay } from './pay'
+import { send } from './send'
 
 export type App = { Bindings: Env; Variables: { owner: string; shop: string; dev: string } }
 const app = new Hono<App>()
@@ -180,6 +181,7 @@ app.use('/auth/logout', auth)
 app.use('/pay/config', auth)
 app.use('/pay/create', auth)
 app.use('/pay/status/*', auth)
+app.use('/send/*', auth)
 
 async function auth(c: Context<App>, next: () => Promise<void>) {
   const h = c.req.header('Authorization') ?? ''
@@ -224,6 +226,7 @@ app.post('/support', async (c) => {
 
 app.route('/sync', sync)
 app.route('/pay', pay)
+app.route('/send', send)
 
 /* ---------- seller tools: set a shop's plan after you receive their payment ---------- */
 app.post('/admin/plan', async (c) => {
@@ -235,6 +238,8 @@ app.post('/admin/plan', async (c) => {
   if (!o) return bad(c, 404, 'no_shop')
   const days = Math.max(0, Math.min(3650, Number(b.days) || 30))
   await c.env.DB.prepare('UPDATE shops SET plan=?,plan_until=? WHERE id=?').bind(b.plan, b.plan === 'free' ? 0 : Date.now() + days * DAY, o.shop_id).run()
+  // A shop that has paid should not also keep its free trial running.
+  if (b.endTrial === true) await c.env.DB.prepare('UPDATE shops SET trial_ends=0 WHERE id=?').bind(o.shop_id).run()
   return c.json({ ok: true, shop: await shopInfo(c.env, o.shop_id) })
 })
 

@@ -7,7 +7,7 @@ export const RANK: Record<Plan, number> = { free: 0, pro: 1, max: 2 }
 /** Smallest plan that unlocks a feature. A feature that is not listed is free. */
 export const PLANREQ: Record<string, Plan> = {
   vat: 'pro', purch: 'pro', returns: 'pro', orders: 'pro', staff: 'pro',
-  dynqr: 'pro', books: 'pro', export: 'pro', cctv: 'max', delivery: 'max',
+  dynqr: 'pro', books: 'pro', export: 'pro', emailbill: 'pro', cctv: 'max', delivery: 'max',
 }
 export const FREE_ITEM_LIMIT = 100
 export const FREE_CREDIT_LIMIT = 10
@@ -112,6 +112,9 @@ export interface SaleArgs {
   partyId?: string
   payments: Payment[]
   by: string
+  /** What the customer handed over and the change given back, kept on the bill. */
+  received?: number
+  change?: number
 }
 export async function createSale(a: SaleArgs): Promise<Invoice> {
   return db.transaction('rw', [db.items, db.invoices, db.ledger, db.stockMoves, db.parties, db.kv, db.outbox], async () => {
@@ -123,7 +126,14 @@ export async function createSale(a: SaleArgs): Promise<Invoice> {
       lines.push({ itemId: it.id, name: it.nameNe, nameEn: it.nameEn, qty: c.qty, rate: it.price, vat: it.vat ? 13 : 0 })
     }
     const t = totals(lines, a.kind === 'tax')
-    const inv: Invoice = { id: uid(), no: await nextNo(a.kind, at), kind: a.kind, at, partyId: a.partyId, lines, ...t, payments: a.payments, by: a.by }
+    const credit = a.payments.filter((p) => p.method === 'credit').reduce((s, p) => s + p.amount, 0)
+    const party = a.partyId ? await db.parties.get(a.partyId) : undefined
+    const inv: Invoice = {
+      id: uid(), no: await nextNo(a.kind, at), kind: a.kind, at, partyId: a.partyId,
+      ...(party ? { partyName: party.name, partyBalance: round2(party.balance + credit) } : {}),
+      ...(a.received != null ? { received: a.received, change: a.change ?? 0 } : {}),
+      lines, ...t, payments: a.payments, by: a.by,
+    }
     await db.invoices.add(inv)
     await queue('invoices', inv.id)
     for (const l of lines) {
@@ -133,7 +143,6 @@ export async function createSale(a: SaleArgs): Promise<Invoice> {
       await db.stockMoves.add(mv)
       await queue('stockMoves', mv.id)
     }
-    const credit = a.payments.filter((p) => p.method === 'credit').reduce((s, p) => s + p.amount, 0)
     if (credit > 0 && a.partyId) {
       const p = (await db.parties.get(a.partyId))!
       await db.parties.update(p.id, { balance: round2(p.balance + credit) })
@@ -200,8 +209,8 @@ export async function receivePayment(partyId: string, amount: number, desc: stri
     await queue('ledger', row.id)
   })
 }
-export async function addParty(type: 'customer' | 'supplier', name: string, phone?: string) {
-  const p = { id: uid(), type, name, phone, balance: 0, updatedAt: Date.now() }
+export async function addParty(type: 'customer' | 'supplier', name: string, phone?: string, email?: string) {
+  const p = { id: uid(), type, name, phone: phone || undefined, email: email || undefined, balance: 0, updatedAt: Date.now() }
   await db.parties.add(p)
   await queue('parties', p.id)
   return p

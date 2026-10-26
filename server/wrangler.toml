@@ -16,6 +16,7 @@ MAIL_FROM = "Pocket Pasal <onboarding@resend.dev>"
 # Never set this to 1 in production.
 DEV_RETURN_OTP = "0"
 ENABLE_MOCK_PAY = "0"
+MAIL_DAILY_LIMIT = "100"
 # The public address of this API once deployed, for example https://pasal-api.yourname.workers.dev
 PUBLIC_URL = "https://pocket-pasal-api.dahal-khani.workers.dev"
 

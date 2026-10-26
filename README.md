@@ -11,10 +11,11 @@ Runs in any browser and installs on Android like an app (a PWA). Nepali first, E
 - The app works fully on the phone without the server. Cloud sync and login need the email sender (Resend) to be connected first, see below.
 
 ## What it does
-- Sell: search or camera barcode scan, tax invoice (13% VAT) or cash receipt, cash / QR / card / credit, split into categories, best sellers first.
+- Sell: search or camera barcode scan (works on iPhone too), type the amount the customer gave and see the change, put the rest on baki, tax invoice (13% VAT) or cash receipt, cash / QR / card / credit, split into categories, best sellers first.
 - Search that works from an English keyboard on Nepali names (`chini`, `tel`, `dudh`, `wai`).
 - Stock, categories, purchases from suppliers, returns (credit notes), low-stock order list with WhatsApp / Messenger / email / call buttons.
 - Khata: customer and supplier ledgers, day book, sales book, VAT summary, CSV export.
+- Bills can be sent as PDF, shared, or emailed to the customer (the owner can switch these buttons off in Settings). Books and ledger go to Excel for the PC.
 - Print on any ESC/POS thermal printer (58 mm / 80 mm over Bluetooth) or A4/A5 through PDF. Nepali text prints correctly because the bill is sent as a picture.
 - Owner and staff on one phone or several. The owner chooses what each staff member may do.
 - Cloud backup and sync between phones, email-code login (no SMS cost), lost phones can be cut off.
@@ -43,10 +44,10 @@ cd app && npm install && npm run dev  # http://localhost:5173
 ## Tests
 | Command | What it checks |
 |---|---|
-| `cd app && npm test` | 29 unit tests: money and VAT, search, stock, returns, ledgers, sync merging, permissions |
-| `cd server && npm test` | 113 API checks: login and codes, sync rules, payments, and attack-style security tests |
-| `cd app && node e2e/shop2.mjs` | 55 browser checks: a new pharmacy end to end, a second phone, offline sale, cloud, QR, staff, backup, plan locks |
-| `cd app && npm run build:prod && node e2e/security.mjs` | 18 front-end security checks under the strict content policy |
+| `cd app && npm test` | 40 unit tests: money and VAT, search, change and baki, stock, returns, ledgers, sync merging, permissions, Excel and PDF files |
+| `cd server && npm test` | 135 API checks: login and codes, sync rules, payments, emailing bills, and attack-style security tests |
+| `cd app && node e2e/shop2.mjs` | 71 browser checks: a new pharmacy end to end, photos, typed amount and baki, PDF, email, Excel, a second phone, offline sale, cloud, QR, staff, backup, plan locks |
+| `cd app && npm run build:prod && node e2e/security.mjs` | 20 front-end security checks under the strict content policy, including reading a barcode with a (fake) camera using the same reader iPhones use |
 | `API=… ORIGIN=… node server/test/prod-smoke.mjs` and `SITE=… node app/e2e/prod-check.mjs` | Safe checks of the live API and the live site (they create no account) |
 
 The browser tests drive a real Chrome (`CHROME=/path/to/chrome`) and need the API and the app running as above.

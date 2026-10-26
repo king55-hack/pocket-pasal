@@ -12,7 +12,7 @@ export const DEFAULTS: Settings = {
   shopName: '', company: '', shopType: 'kirana', pan: '', vatRegistered: false,
   province: '', district: '', muni: '', ward: '',
   lang: 'ne', cal: 'BS', simple: true, big: false, paper: '58',
-  mod: { credit: true, vat: true, barcode: true, qr: true, returns: true, purch: true, staff: true, cctv: false, delivery: false, orders: true, alerts: true },
+  mod: { credit: true, vat: true, barcode: true, qr: true, returns: true, purch: true, staff: true, cctv: false, delivery: false, orders: true, alerts: true, share: true },
   plan: 'free', planUntil: 0, trialEnds: 0, openingCash: 0, billFooter: '',
 }
 

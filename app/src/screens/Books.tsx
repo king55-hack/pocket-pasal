@@ -1,14 +1,60 @@
 import { useState } from 'react'
+import { PwInput } from '../components'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useApp } from '../ctx'
 import { db } from '../db'
 import { startOfDay } from '../format'
 import { checkSecret, createPurchase, createReturn, returnedQty } from '../logic'
+import { authed } from '../api'
+import { kvGet } from '../db'
+import { buildReport } from '../reports'
+import { bytesToBase64, shareOrSave, toBlob } from '../share'
+import { XLSX_MIME } from '../xlsx'
 import { Contact } from './Khata'
 import type { Invoice, Item, Party, Purchase } from '../types'
 
 type Range = 'day' | 'week' | 'month'
 const since = (r: Range) => (r === 'day' ? startOfDay() : startOfDay(Date.now() - (r === 'week' ? 6 : 29) * 86400000))
+
+type ExRange = 'day' | 'week' | 'month' | 'year' | 'all'
+const exFrom = (r: ExRange) => (r === 'all' ? 0 : r === 'day' ? startOfDay() : startOfDay(Date.now() - ({ week: 6, month: 29, year: 364 }[r]) * 86400000))
+
+/** Excel file of the books for the PC: made on the phone, then saved, shared, or emailed to the owner. */
+function ExportBar() {
+  const { t, s, can, perms, cloud, online, date, time, toast, go } = useApp()
+  const [r, setR] = useState<ExRange>('month')
+  const [busy, setBusy] = useState('')
+  const names: Record<ExRange, string> = { day: t('आज', 'Today'), week: t('७ दिन', '7 days'), month: t('३० दिन', '30 days'), year: t('१ वर्ष', '1 year'), all: t('सबै', 'All') }
+  const build = () => buildReport({ from: exFrom(r), to: Date.now(), s, t, date, time, canCost: perms.viewCost })
+  async function toFile() {
+    if (!can('export')) return go('upgrade', { f: 'export' })
+    setBusy('file')
+    try { const x = await build(); const res = await shareOrSave(toBlob(x.bytes, XLSX_MIME), x.filename, 'Pocket Pasal'); if (res === 'saved') toast(t('Excel फाइल सेभ भयो', 'Excel file saved')) } catch { toast(t('फाइल बन्न सकेन', 'Could not make the file')) }
+    setBusy('')
+  }
+  async function toMail() {
+    if (!can('export') || !can('emailbill')) return go('upgrade', { f: 'emailbill' })
+    const to = cloud?.email || (await kvGet('ownerEmail', ''))
+    if (!to) return toast(t('आफ्नो इमेल भेटिएन', 'Your email was not found'))
+    setBusy('mail')
+    try {
+      const x = await build()
+      await authed('/send/email', 'POST', { to, kind: 'report', filename: x.filename, data: bytesToBase64(x.bytes) })
+      toast(t(to + ' मा पठाइयो', 'Sent to ' + to))
+    } catch (e: any) { toast(e.code === 'mail' ? t('इमेल सेवा अझै तयार छैन', 'The email service is not ready yet') : e.code === 'limit' ? t('आजको इमेल सीमा सकियो', "Today's email limit is used up") : t('इमेल जान सकेन। इन्टरनेट जाँच्नुस्।', 'Could not send. Check the internet.')) }
+    setBusy('')
+  }
+  return (
+    <>
+      <div className="h">📊 {t('Excel (PC मा हेर्न)', 'Excel (to see on your PC)')}</div>
+      <div className="note">{t('बिक्री, खरिद, लेजर, ग्राहकको बाँकी र स्टक एउटै Excel फाइलमा आउँछ। PC मा हेर्न: यहाँबाट आफ्नो इमेलमा पठाउनुस्, वा PC को ब्राउजरमा यही साइट खोलेर लगइन गरेर यही बटन थिच्नुस्।', 'Sales, purchases, ledger, customer dues and stock come in one Excel file. To see it on your PC: email it to yourself from here, or open this site in the PC browser, log in and tap the same button.')}</div>
+      <div className="row wrap">{(Object.keys(names) as ExRange[]).map((k) => <button key={k} className={'pill' + (r === k ? ' on' : '')} onClick={() => setR(k)}>{names[k]}</button>)}</div>
+      <button className="btn" disabled={!!busy} onClick={toFile}>{busy === 'file' ? '…' : '⬇ ' + t('Excel फाइल बनाउनुस्', 'Make the Excel file')}{!can('export') ? ' 🔒' : ''}</button>
+      <button className="btn o" disabled={!!busy || (can('export') && can('emailbill') && (!cloud || !online))} onClick={toMail}>{busy === 'mail' ? '…' : '✉ ' + t('मेरो इमेलमा पठाउनुस्', 'Email it to me')}{!can('emailbill') ? ' 🔒' : ''}</button>
+      {can('emailbill') && (!cloud || !online) && <div className="mut" style={{ fontSize: 13 }}>{!cloud ? t('इमेलको लागि क्लाउड खाता जोड्नुस्।', 'Connect the cloud account to use email.') : t('इमेलको लागि इन्टरनेट चाहिन्छ।', 'Email needs internet.')}</div>}
+    </>
+  )
+}
 
 export function Books() {
   const { t, m, n, can, go, date, time, s } = useApp()
@@ -28,13 +74,6 @@ export function Books() {
   const inVat = 0
   const tabs: [string, string][] = [['day', t('दैनिक', 'Day')], ['sales', t('बिक्री', 'Sales')], ['purch', t('खरिद', 'Purchase')], ['led', t('लेजर', 'Ledger')], ...(s.vatRegistered ? [['vat', 'VAT'] as [string, string]] : [])]
 
-  function exportCsv() {
-    if (!can('export')) return need('export')
-    const rows = [['no', 'date', 'kind', 'total', 'vat', 'by'], ...inv.map((i) => [i.no, new Date(i.at).toISOString(), i.kind, i.total, i.vat, i.by])]
-    const blob = new Blob([rows.map((r) => r.join(',')).join('\n')], { type: 'text/csv' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob); a.download = 'sales.csv'; a.click()
-  }
   return (
     <div className="body">
       <div className="tabs">{tabs.map(([k, l]) => <button key={k} className={'pill' + (tab === k ? ' on' : '')} onClick={() => pick(k)}>{l}{k !== 'day' && !can('books') ? ' 🔒' : ''}</button>)}</div>
@@ -55,7 +94,6 @@ export function Books() {
           <tbody>{inv.sort((a, b) => b.at - a.at).map((i) => <tr key={i.id}><td>{n(i.no)}<br /><small className="mut">{i.kind === 'tax' ? t('कर', 'Tax') : i.kind === 'cash' ? t('नगद', 'Cash') : t('फिर्ता', 'Return')}</small></td><td>{date(i.at)}<br /><small className="mut">{time(i.at)}</small></td><td className={'n' + (i.kind === 'credit_note' ? ' w' : '')}>{i.kind === 'credit_note' ? '− ' : ''}{m(i.total)}</td></tr>)}</tbody></table>
         {inv.length === 0 && <div className="mut">{t('यो अवधिमा बिल छैन।', 'No bills in this period.')}</div>}
         <div className="tot b"><span>{t('जम्मा', 'Total')}</span><span>{m(inv.reduce((a, i) => a + sign(i) * i.total, 0))}</span></div>
-        <button className="btn o" onClick={exportCsv}>{t('Excel (CSV) निकाल्नुस्', 'Export Excel (CSV)')}{!can('export') ? ' 🔒' : ''}</button>
       </>)}
       {tab === 'purch' && (<>
         <table><thead><tr><th>{t('बिल', 'Bill')}</th><th>{t('मिति', 'Date')}</th><th className="n">{t('जम्मा', 'Total')}</th></tr></thead>
@@ -69,6 +107,7 @@ export function Books() {
           <tr><td>{t('खरिदमा भ्याट (इनपुट)', 'Input VAT (purchases)')}</td><td className="n">− {m(inVat)}</td></tr>
           <tr><th>{t('तिर्नुपर्ने भ्याट', 'VAT payable')}</th><th className="n">{m(outVat - inVat)}</th></tr></tbody></table>
         <div className="note">{t('यो सारांश मात्र हो। खरिदको भ्याट (इनपुट) अहिले जोडिएको छैन। IRD को नियम अनुसार लेखापालसँग जाँच गर्नुस्।', 'Summary only. Input VAT from purchases is not tracked yet. Check against IRD rules with an accountant.')}</div></>)}
+      <ExportBar />
     </div>
   )
 }
@@ -126,7 +165,7 @@ export function Returns() {
           <div className="qty"><button disabled={!(sel[l.itemId] > 0)} onClick={() => setSel({ ...sel, [l.itemId]: sel[l.itemId] - 1 })}>−</button><b>{n(sel[l.itemId] || 0)}</b>
             <button disabled={(sel[l.itemId] || 0) >= left(l.itemId)} onClick={() => setSel({ ...sel, [l.itemId]: (sel[l.itemId] || 0) + 1 })}>+</button></div></div>))}
       {needOwner && <><div className="note">{t('मालिकको स्वीकृति चाहिन्छ। मालिकको पासवर्ड राख्नुस्।', 'Owner approval needed. Enter the owner password.')}</div>
-        <input className="in" type="password" value={pin} onChange={(e) => setPin(e.target.value)} /></>}
+        <PwInput className="in" value={pin} onChange={(e) => setPin(e.target.value)} /></>}
       <div className="note">{t('यसले स्टक फर्काउँछ, क्रेडिट नोट बनाउँछ, र खाता मिलाउँछ।', 'This puts stock back, creates a credit note and updates the accounts.')}</div>
       <button className="btn stick" disabled={!Object.values(sel).some((x) => x > 0) || (needOwner && !pin)} onClick={go}>{t('फिर्ता गर्नुस्', 'Process return')}</button>
     </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { PwInput } from '../components'
 import { useApp } from '../ctx'
 import { authed, device, post, setCloud, type ApiError } from '../api'
 import { db, kvGet } from '../db'
@@ -103,7 +104,7 @@ export function CloudScreen() {
       <div className="note">{t('जोडेपछि डाटा सुरक्षित रहन्छ, फोन हरायो भने पनि। अर्को फोनमा पनि उही पसल चलाउन सकिन्छ। इन्टरनेट नभए पनि एप चलिरहन्छ।', 'Once connected your data is safe even if the phone is lost, and you can run the same shop on another phone. The app keeps working without internet.')}</div>
       {step === 'start' && (<>
         <label className="f">{t('इमेल', 'Email')}<input className="in" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-        <label className="f">{t('यो एपको मालिकको पासवर्ड', 'Owner password of this app')}<input className="in" type="password" value={pw} onChange={(e) => setPw(e.target.value)} /></label>
+        <label className="f">{t('यो एपको मालिकको पासवर्ड', 'Owner password of this app')}<PwInput className="in" value={pw} onChange={(e) => setPw(e.target.value)} /></label>
         {err && <div className="note w">{err}</div>}
         <button className="btn" disabled={busy || !email.includes('@') || !pw} onClick={begin}>{busy ? '…' : t('इमेलमा कोड पठाउनुस्', 'Email me a code')}</button>
       </>)}
@@ -151,7 +152,7 @@ export function RestoreFlow({ onBack, onDone }: { onBack: () => void; onDone: ()
     <div className="body">
       <div className="hero">{t('पहिलेको खातामा लगइन', 'Log in to your account')}</div>
       <label className="f">{t('इमेल', 'Email')}<input className="in" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-      <label className="f">{t('पासवर्ड', 'Password')}<input className="in" type="password" value={pw} onChange={(e) => setPw(e.target.value)} /></label>
+      <label className="f">{t('पासवर्ड', 'Password')}<PwInput className="in" value={pw} onChange={(e) => setPw(e.target.value)} /></label>
       {needCode && (<>
         <div className="mut">{t('नयाँ फोन भएकाले इमेलमा आएको ६ अङ्कको कोड राख्नुस्', 'This is a new phone, so enter the 6-digit code from your email')}</div>
         {hint && <div className="note">{hint}</div>}

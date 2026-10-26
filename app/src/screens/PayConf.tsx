@@ -1,23 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+import { PwInput } from '../components'
 import { useApp } from '../ctx'
 import { authed } from '../api'
 import { kvSet } from '../db'
-
-function shrink(file: File, max = 360): Promise<string> {
-  return new Promise((res) => {
-    const img = new Image()
-    img.onload = () => {
-      const k = Math.min(1, max / Math.max(img.width, img.height))
-      const c = document.createElement('canvas')
-      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k)
-      const ctx = c.getContext('2d')!
-      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height)
-      ctx.drawImage(img, 0, 0, c.width, c.height)
-      res(c.toDataURL('image/jpeg', 0.85))
-    }
-    img.src = URL.createObjectURL(file)
-  })
-}
+import { compressImage, QR_PHOTO } from '../images'
 
 export function PayConf() {
   const { t, s, save, cloud, can, go, online, toast } = useApp()
@@ -56,7 +42,7 @@ export function PayConf() {
             <button className={'pill' + (mode === 'sandbox' ? ' on' : '')} onClick={() => setMode('sandbox')}>{t('परीक्षण (पैसा सर्दैन)', 'Test (no real money)')}</button>
             <button className={'pill' + (mode === 'live' ? ' on' : '')} onClick={() => setMode('live')}>{t('असली', 'Live')}</button></div>
           {id === 'esewa' && <label className="f">{t('मर्चेन्ट / प्रोडक्ट कोड', 'Merchant / product code')}<input className="in" value={f.code} onChange={(e) => setF({ ...f, code: e.target.value })} placeholder="EPAYTEST" /></label>}
-          <label className="f">{t('गोप्य कुञ्जी (Secret key)', 'Secret key')}<input className="in" type="password" autoComplete="off" value={f.secret} onChange={(e) => setF({ ...f, secret: e.target.value })} /></label>
+          <label className="f">{t('गोप्य कुञ्जी (Secret key)', 'Secret key')}<PwInput className="in" autoComplete="off" value={f.secret} onChange={(e) => setF({ ...f, secret: e.target.value })} /></label>
           <div className="mut" style={{ fontSize: 13, margin: '6px 0' }}>{help}</div>
           <div className="row"><button className="btn g" disabled={busy || !f.secret || (id === 'esewa' && !f.code)} onClick={() => saveKeys(id)}>{busy ? '…' : t('सेभ गर्नुस्', 'Save')}</button>
             <button className="btn o g" onClick={() => setOpen('')}>{t('रद्द', 'Cancel')}</button></div>
@@ -76,7 +62,7 @@ export function PayConf() {
       <div className="h">{t('१. मेरो आफ्नै QR (सबै प्लानमा, इन्टरनेट नचाहिने)', '1. My own QR (all plans, works offline)')}</div>
       <div className="note">{t('Fonepay, eSewa वा Khalti बाट पाएको आफ्नो पसलको QR को फोटो राख्नुस्। भुक्तानीको बेला यही देखिन्छ। ग्राहकले रकम आफैँ हाल्छ, त्यसैले बिल "अप्रमाणित" रहन्छ।', 'Upload the QR picture you got from Fonepay, eSewa or Khalti. It is shown at payment time. The customer types the amount, so the bill stays "unverified".')}</div>
       {s.staticQr && <div className="receipt" style={{ padding: 10 }}><img src={s.staticQr} alt="QR" style={{ width: 200, maxWidth: '100%' }} /></div>}
-      <input ref={file} type="file" accept="image/*" hidden onChange={async (e) => { const fl = e.target.files?.[0]; if (fl) { await save({ staticQr: await shrink(fl) }); toast(t('QR सेभ भयो', 'QR saved')) } }} />
+      <input ref={file} type="file" accept="image/*" hidden onChange={async (e) => { const fl = e.target.files?.[0]; if (fl) { await save({ staticQr: await compressImage(fl, QR_PHOTO) }); toast(t('QR सेभ भयो', 'QR saved')) } }} />
       <div className="row"><button className="btn g" onClick={() => file.current?.click()}>{s.staticQr ? t('QR बदल्नुस्', 'Change QR') : t('QR फोटो राख्नुस्', 'Upload QR picture')}</button>
         {s.staticQr && <button className="btn o g" onClick={() => save({ staticQr: undefined })}>{t('हटाउनुस्', 'Remove')}</button>}</div>
 

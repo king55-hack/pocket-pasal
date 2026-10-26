@@ -5,7 +5,7 @@ import { db } from '../db'
 import { addParty, FREE_CREDIT_LIMIT, receivePayment } from '../logic'
 import type { LedgerRow, Party } from '../types'
 
-export function Contact({ phone, name, text }: { phone?: string; name: string; text?: string }) {
+export function Contact({ phone, name, text, email }: { phone?: string; name: string; text?: string; email?: string }) {
   const { t, toast, online } = useApp()
   const p = (phone || '').replace(/\D/g, '')
   const body = encodeURIComponent(text || '')
@@ -15,7 +15,7 @@ export function Contact({ phone, name, text }: { phone?: string; name: string; t
       <button className="btn o s" onClick={() => open('tel:' + p)}>📞 {t('फोन', 'Call')}</button>
       <button className="btn o s" onClick={() => open('https://wa.me/' + (p.length === 10 ? '977' + p : p) + '?text=' + body)}>WhatsApp</button>
       <button className="btn o s" onClick={() => open('https://m.me/?text=' + body)}>Messenger</button>
-      <button className="btn o s" onClick={() => open('mailto:?subject=' + encodeURIComponent(name) + '&body=' + body)}>Email</button>
+      <button className="btn o s" onClick={() => open('mailto:' + encodeURIComponent(email ?? '') + '?subject=' + encodeURIComponent(name) + '&body=' + body)}>Email</button>
       {!online && <span className="mut" style={{ fontSize: 12 }}>{t('इन्टरनेट चाहिन्छ', 'needs internet')}</span>}
     </div>
   )
@@ -27,11 +27,12 @@ export function Parties() {
   const list = useLiveQuery(() => db.parties.where('type').equals(tab).toArray(), [tab], [] as Party[])
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const add = async () => {
     if (!name.trim()) return
     if (tab === 'customer' && plan === 'free' && list.length >= FREE_CREDIT_LIMIT) { toast(t('फ्री प्लानमा १० ग्राहकसम्म', 'Free plan allows 10 customers')); go('upgrade', { f: 'books' }); return }
-    await addParty(tab, name.trim(), phone)
-    setName(''); setPhone('')
+    await addParty(tab, name.trim(), phone, email.trim())
+    setName(''); setPhone(''); setEmail('')
   }
   return (
     <div className="body">
@@ -44,6 +45,7 @@ export function Parties() {
       <div className="h">{t('नयाँ थप्नुस्', 'Add new')}</div>
       <input className="in" placeholder={t('नाम', 'Name')} value={name} onChange={(e) => setName(e.target.value)} />
       <input className="in" inputMode="tel" placeholder={t('फोन नम्बर', 'Phone')} value={phone} onChange={(e) => setPhone(e.target.value)} />
+      <input className="in" type="email" placeholder={t('इमेल (ऐच्छिक)', 'Email (optional)')} value={email} onChange={(e) => setEmail(e.target.value)} />
       <button className="btn" disabled={!name.trim()} onClick={add}>+ {t('थप्नुस्', 'Add')}</button>
     </div>
   )
@@ -71,7 +73,7 @@ export function Ledger({ id }: { id: string }) {
       {rows.length === 0 && <div className="mut">{t('अहिलेसम्म कारोबार छैन।', 'No entries yet.')}</div>}
       <div className="row"><input className="in g" inputMode="decimal" placeholder={t('रकम', 'Amount')} value={amt} onChange={(e) => setAmt(e.target.value)} />
         <button className="btn s" disabled={!+amt} onClick={pay}>{isCust ? t('पैसा लियो', 'Received') : t('पैसा दियो', 'Paid')}</button></div>
-      {isCust && <Contact phone={p.phone} name={p.name} text={t(p.name + ' जी, तपाईंको ' + m(p.balance) + ' बाँकी छ। धन्यवाद।', 'Dear ' + p.name + ', ' + m(p.balance) + ' is due. Thank you.')} />}
+      {isCust && <Contact phone={p.phone} email={p.email} name={p.name} text={t(p.name + ' जी, तपाईंको ' + m(p.balance) + ' बाँकी छ। धन्यवाद।', 'Dear ' + p.name + ', ' + m(p.balance) + ' is due. Thank you.')} />}
     </div>
   )
 }

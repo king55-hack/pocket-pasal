@@ -69,3 +69,6 @@ video.scan{width:100%;border-radius:12px;background:#000;aspect-ratio:4/3;object
 .otp{display:flex;gap:6px;justify-content:center}
 .logo{width:104px;height:104px;margin:6px auto 0;border-radius:24px;display:block}
 @media print{body *{visibility:hidden}.receipt,.receipt *{visibility:visible}.receipt{position:absolute;left:0;top:0;border:0;width:100%}}
+.pw{position:relative;display:block}.pw input{padding-right:52px}
+.eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:44px;height:44px;border:0;background:none;cursor:pointer;font-size:20px;color:var(--mut)}
+.eye::before{content:"\1F441"}.eye[aria-pressed=true]::before{content:"\1F648"}

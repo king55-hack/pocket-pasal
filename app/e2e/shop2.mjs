@@ -16,6 +16,16 @@ let fails = 0
 const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++ }
 const near = (a, b) => Math.abs(a - b) < 0.005
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+function unzipStore(buf) {
+  const files = {}
+  let p = 0
+  while (buf.readUInt32LE(p) === 0x04034b50) {
+    const size = buf.readUInt32LE(p + 18), nl = buf.readUInt16LE(p + 26), el = buf.readUInt16LE(p + 28)
+    files[buf.subarray(p + 30, p + 30 + nl).toString('utf8')] = buf.subarray(p + 30 + nl + el, p + 30 + nl + el + size).toString('utf8')
+    p += 30 + nl + el + size
+  }
+  return files
+}
 
 const browser = await chromium.launch({ executablePath: CHROME, headless: true })
 const errors = []
@@ -77,6 +87,10 @@ await p.getByLabel('Your name').fill('Sita')
 await p.getByLabel('Email', { exact: true }).fill(EMAIL)
 await p.getByLabel('Password', { exact: true }).fill('short')
 await p.getByLabel('Repeat password').fill('short')
+await p.getByRole('button', { name: 'Show' }).first().click()
+ok((await p.getByLabel('Password', { exact: true }).getAttribute('type')) === 'text' && (await p.getByLabel('Password', { exact: true }).inputValue()) === 'short', 'the eye button shows the password that was typed')
+await p.getByRole('button', { name: 'Hide' }).first().click()
+ok((await p.getByLabel('Password', { exact: true }).getAttribute('type')) === 'password', 'and hides it again')
 await btn(p, 'Start my shop').click()
 ok(await p.getByText('at least 8 characters').isVisible(), 'a short password is refused in the app')
 await p.getByLabel('Password', { exact: true }).fill(PW)
@@ -90,10 +104,11 @@ ok(st0.shopType === 'pharmacy' && st0.province === 'bagmati' && st0.district ===
 ok((await dump(p, 'items')).length === 0, 'a pharmacy starts with no kirana items')
 
 /* ============ add stock through the form ============ */
-async function addItem(name, cat, cost, price, stock, min) {
+async function addItem(name, cat, cost, price, stock, min, photo) {
   await nav(p, 'Items')
   await btn(p, '+ New').click()
   await p.getByPlaceholder('Name (English)').fill(name)
+  if (photo) await p.locator('input[type=file]').setInputFiles({ name: 'camera.jpg', mimeType: 'image/jpeg', buffer: photo })
   await p.getByLabel('Category').selectOption({ label: cat })
   await p.getByLabel('Cost').fill(String(cost))
   await p.getByLabel('Price').fill(String(price))
@@ -104,12 +119,26 @@ async function addItem(name, cat, cost, price, stock, min) {
 }
 await addItem('Paracetamol 500mg', 'Tablets', 8, 12, 200, 20)
 await addItem('Cough syrup', 'Syrups', 90, 120, 15, 5)
-await addItem('Bandage roll', 'Health supplies', 20, 35, 3, 5)
+// a 3000 x 2000 picture like a phone camera makes, with colour blocks and a little grain
+const bigPhoto = Buffer.from(await p.evaluate(() => {
+  const c = document.createElement('canvas'); c.width = 3000; c.height = 2000
+  const x = c.getContext('2d')
+  const g = x.createLinearGradient(0, 0, 3000, 2000); g.addColorStop(0, '#d9a066'); g.addColorStop(1, '#3a6ea5'); x.fillStyle = g; x.fillRect(0, 0, 3000, 2000)
+  for (let i = 0; i < 2500; i++) { x.fillStyle = 'hsl(' + Math.random() * 360 + ',60%,' + (30 + Math.random() * 40) + '%)'; x.fillRect(Math.random() * 3000, Math.random() * 2000, 20 + Math.random() * 160, 20 + Math.random() * 160) }
+  for (let i = 0; i < 60000; i++) { x.fillStyle = Math.random() > 0.5 ? '#ffffff30' : '#00000030'; x.fillRect(Math.random() * 3000, Math.random() * 2000, 2, 2) }
+  return c.toDataURL('image/jpeg', 0.95).split(',')[1]
+}), 'base64')
+await addItem('Bandage roll', 'Health supplies', 20, 35, 3, 5, bigPhoto)
 await addItem('<img src=x onerror=alert(1)>', 'Tablets', 5, 10, 10, 2)
 await nav(p, 'Items')
 const items = await dump(p, 'items')
 const itemOf = (n) => items.find((i) => i.nameEn === n)
 ok(items.length === 4 && itemOf('Paracetamol 500mg').stock === 200 && itemOf('Paracetamol 500mg').vat === true, '4 items added through the form, VAT on by default')
+{
+  const photo = itemOf('Bandage roll').photo
+  const dims = await p.evaluate((u) => new Promise((r) => { const i = new Image(); i.onload = () => r([i.naturalWidth, i.naturalHeight]); i.src = u }), photo)
+  ok(bigPhoto.length > 150000 && photo && photo.length <= 52000 && Math.max(...dims) >= 360 && Math.max(...dims) <= 720, `a ${(bigPhoto.length / 1e6).toFixed(1)} MB camera photo is kept clear (${dims.join(' x ')} px) and small (${Math.round(photo.length / 1000)} KB, fits the sync limit)`)
+}
 ok((await p.locator('img[src="x"]').count()) === 0 && (await p.getByText('<img src=x onerror=alert(1)>').count()) >= 1 && dialogs.length === 0, 'an item named with HTML shows as plain text and runs nothing')
 ok((await p.getByText('Low stock').count()) >= 1, 'Bandage roll (3 left, min 5) is marked low stock')
 const mvSum = (await dump(p, 'stockMoves')).filter((m) => m.itemId === itemOf('Paracetamol 500mg').id).reduce((a, m) => a + m.qty, 0)
@@ -254,10 +283,10 @@ await p.getByRole('button', { name: /^Pay/ }).click()
 await btn(p, 'QR', { exact: true }).click()
 const [created] = await Promise.all([p.waitForResponse((r) => r.url().includes('/pay/create')), btn(p, 'Make QR').click()])
 const pay = await created.json()
-ok(pay.id && (await p.locator('.receipt img[alt="QR"]').evaluate((i) => i.naturalWidth)) >= 200, 'an exact-amount QR is drawn')
+ok(!!pay.id && (await p.waitForFunction(() => { const i = document.querySelector('.receipt img[alt="QR"]'); return !!i && i.naturalWidth >= 200 }, null, { timeout: 6000 }).then(() => true, () => false)), 'an exact-amount QR is drawn')
 ok(await btn(p, 'Create bill').isDisabled(), 'the bill cannot be made before the customer pays')
 await A.ctx.request.post(`${API}/pay/mock/${pay.id}/pay`)
-await p.getByText('Payment received').first().waitFor({ timeout: 12000 })
+await p.getByText('Payment received').first().waitFor({ timeout: 12000 }).catch(async (e) => { console.log('DIAG qr screen:', (await p.locator('.body').innerText()).split('\n').join(' | ').slice(0, 400), 'status:', JSON.stringify(await (await A.ctx.request.get(API + '/pay/status/' + pay.id, { headers: { Authorization: 'Bearer ' + (await kv(p, 'cloud')).access } })).json())); throw e })
 await btn(p, 'Create bill').click()
 await waitText(p, 'Saved')
 const qrBill = (await dump(p, 'invoices')).find((i) => i.payments[0]?.method === 'qr')
@@ -338,6 +367,76 @@ const stock2 = (await dump(q, 'items')).find((i) => i.nameEn === 'Paracetamol 50
 ok(stock1 === 205 && stock2 === 205, `both phones sold the same medicine and agree on stock: ${stock1} and ${stock2} (208 - 1 - 2)`)
 const bills = [...(await dump(p, 'invoices')), ...(await dump(q, 'invoices'))].map((i) => i.no)
 ok(new Set(bills.filter((n) => !/-CN-/.test(n))).size === 5 && (await A.ctx.request.get(`${API}/sync/conflicts`, { headers: { Authorization: 'Bearer ' + (await kv(p, 'cloud')).access } }).then((r) => r.json())).conflicts.length === 0, 'no duplicate bill numbers between the two phones')
+
+/* ============ typed amount, change, baki, PDF, email, Excel ============ */
+await nav(p, 'Sale')
+await p.locator('.card', { hasText: 'Cough' }).click()
+await p.getByRole('button', { name: /Cash receipt/ }).click()
+await p.getByRole('button', { name: /^Pay/ }).click()
+await p.getByLabel('Amount the customer gave (Rs)').fill('150')
+await p.getByText('Give back').first().waitFor({ timeout: 4000 })
+ok(/Rs 30/.test(await p.locator('.body').innerText()), 'Rs 120 bill, customer gives Rs 150: the screen says give back Rs 30')
+await btn(p, 'Create bill').click()
+await waitText(p, 'Saved')
+let nb = (await dump(p, 'invoices')).sort((a, c) => c.at - a.at)[0]
+ok(nb.total === 120 && nb.received === 150 && nb.change === 30, 'the bill remembers what was given (150) and the change (30)')
+ok(/Give back/.test(await p.locator('.body').innerText()), 'the bill screen also reminds to give back the change')
+const [pdfDl] = await Promise.all([p.waitForEvent('download'), p.getByRole('button', { name: /PDF/ }).click()])
+const pdfFile = join(mkdtempSync(join(tmpdir(), 'pasal-')), 'bill.pdf')
+await pdfDl.saveAs(pdfFile)
+const pdfBytes = readFileSync(pdfFile)
+ok(pdfBytes.subarray(0, 5).toString() === '%PDF-' && pdfBytes.toString('latin1').includes('/DCTDecode') && pdfDl.suggestedFilename() === nb.no + '.pdf', 'PDF of the bill downloads and is a real PDF (' + pdfDl.suggestedFilename() + ')')
+await p.getByPlaceholder("Customer's email").fill('customer@example.com')
+await btn(p, 'Send email').click()
+await p.getByText('Email sent').first().waitFor({ timeout: 8000 })
+ok(true, 'the bill is emailed to a customer (test mode: the server accepted it)')
+
+// part payment: 240 bill, customer pays 100, the rest 140 becomes baki on Mina's khata
+await nav(p, 'Sale')
+await p.locator('.card', { hasText: 'Cough' }).click()
+await p.locator('.card', { hasText: 'Cough' }).click()
+await p.getByRole('button', { name: /Cash receipt/ }).click()
+await p.getByRole('button', { name: /^Pay/ }).click()
+await p.getByLabel('Amount the customer gave (Rs)').fill('100')
+await p.getByRole('button', { name: 'credit the rest' }).click()
+await p.locator('.item.tap', { hasText: 'Mina Didi' }).click()
+await btn(p, 'Create bill').click()
+await waitText(p, 'Saved')
+nb = (await dump(p, 'invoices')).sort((a, c) => c.at - a.at)[0]
+const minaNow = (await dump(p, 'parties')).find((x) => x.name === 'Mina Didi')
+ok(nb.total === 240 && nb.payments.length === 2 && nb.payments[0].method === 'cash' && nb.payments[0].amount === 100 && nb.payments[1].method === 'credit' && nb.payments[1].amount === 140, 'part payment: Rs 100 cash and Rs 140 baki on the same bill')
+ok(minaNow.balance === 210 && nb.partyBalance === 210 && /Mina Didi now owes/.test(await p.locator('.body').innerText()), 'Mina owes Rs 210 in total, and the bill says so')
+
+// the owner can switch the PDF / email / share buttons off
+await more(p, 'Settings')
+await p.locator('.toggle', { hasText: 'Bill PDF / email / share buttons' }).locator('.sw').click()
+await nav(p, 'Sale')
+await p.locator('.card', { hasText: 'Bandage' }).click()
+await p.getByRole('button', { name: /Cash receipt/ }).click()
+await p.getByRole('button', { name: /^Pay/ }).click()
+await btn(p, 'Exact').click()
+await btn(p, 'Create bill').click()
+await waitText(p, 'Saved')
+ok((await p.getByRole('button', { name: /PDF/ }).count()) === 0 && (await p.getByPlaceholder("Customer's email").count()) === 0 && (await btn(p, 'Print').count()) === 1, 'with the setting off the bill screen has no PDF or email, only Print')
+await more(p, 'Settings')
+await p.locator('.toggle', { hasText: 'Bill PDF / email / share buttons' }).locator('.sw').click()
+
+// Excel for the PC
+await nav(p, 'Books')
+const [xl] = await Promise.all([p.waitForEvent('download'), btn(p, 'Make the Excel file').click()])
+const xlFile = join(mkdtempSync(join(tmpdir(), 'pasal-')), 'books.xlsx')
+await xl.saveAs(xlFile)
+const xbytes = readFileSync(xlFile)
+const parts = unzipStore(xbytes)
+const wbx = parts['xl/workbook.xml'] ?? ''
+ok(xbytes.subarray(0, 2).toString() === 'PK' && ['Summary', 'Sales', 'Items sold', 'Purchases', 'Ledger', 'Customers', 'Suppliers', 'Stock'].every((n) => wbx.includes('name="' + n + '"')), 'the Excel file has all 8 sheets')
+const salesX = parts['xl/worksheets/sheet2.xml'], ledgerX = parts['xl/worksheets/sheet5.xml'], custX = parts['xl/worksheets/sheet6.xml'], stockX = parts['xl/worksheets/sheet8.xml']
+ok(salesX.includes(nb.no) && salesX.includes('Mina Didi') && salesX.includes('<v>150</v>'), 'the Sales sheet lists the bills with the customer and what was given')
+ok(ledgerX.includes('Mina Didi') && ledgerX.includes('<v>210</v>'), 'the Ledger sheet has Mina with a running balance of 210')
+ok(custX.includes('Mina Didi') && custX.includes('<v>210</v>') && stockX.includes('Paracetamol') && stockX.includes('Cost'), 'customers owe and stock are there (owner sees cost)')
+await btn(p, 'Email it to me').click()
+await p.getByText('Sent to ' + EMAIL).first().waitFor({ timeout: 8000 })
+ok(true, 'the Excel report is emailed to the owner')
 
 /* ============ backup keeps login tokens out ============ */
 await more(p, 'Settings')

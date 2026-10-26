@@ -2,6 +2,9 @@
 //   VITE_API_URL=http://127.0.0.1:8787 npm run build:prod   then   node e2e/security.mjs
 // The API must be running with ALLOWED_ORIGINS that includes http://localhost:4173 (see server/.dev.vars).
 import { chromium } from 'playwright-core'
+import bwipjs from 'bwip-js'
+import { writeFileSync, mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { createServer } from 'node:http'
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { join, extname } from 'node:path'
@@ -35,7 +38,23 @@ const app = await serve(4173, (req, resp) => {
 })
 const evil = await serve(4174, (req, resp) => { resp.writeHead(200, { 'Content-Type': 'text/html' }); resp.end('<iframe id="f" src="http://localhost:4173/" width="400" height="600"></iframe>') })
 
-const browser = await chromium.launch({ executablePath: CHROME, headless: true })
+// A fake camera that films one printed EAN-13 barcode, so the scanner can be tried without a person holding a phone.
+const BARCODE = '5901234123457'
+const png = await bwipjs.toBuffer({ bcid: 'ean13', text: BARCODE.slice(0, 12), scale: 4, height: 22, includetext: true, paddingwidth: 20, paddingheight: 20, backgroundcolor: 'ffffff' })
+const maker = await chromium.launch({ executablePath: CHROME, headless: true })
+const mp = await maker.newPage()
+const jpegB64 = await mp.evaluate(async (b64) => {
+  const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode()
+  const c = document.createElement('canvas'); c.width = 640; c.height = 480
+  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, 640, 480)
+  const k = Math.min(560 / img.width, 360 / img.height); x.drawImage(img, (640 - img.width * k) / 2, (480 - img.height * k) / 2, img.width * k, img.height * k)
+  return c.toDataURL('image/jpeg', 0.92).split(',')[1]
+}, png.toString('base64'))
+await maker.close()
+const frame = Buffer.from(jpegB64, 'base64')
+const FAKE_CAM = join(mkdtempSync(join(tmpdir(), 'pasal-cam-')), 'barcode.mjpeg')
+writeFileSync(FAKE_CAM, Buffer.concat(Array.from({ length: 120 }, () => frame)))
+const browser = await chromium.launch({ executablePath: CHROME, headless: true, args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--use-file-for-fake-video-capture=' + FAKE_CAM.replaceAll('\\', '/')] })
 const ctx = await browser.newContext({ viewport: { width: 390, height: 820 }, serviceWorkers: 'block' })
 const page = await ctx.newPage()
 const violations = []
@@ -91,6 +110,28 @@ await page.getByRole('button', { name: 'Connect', exact: true }).click()
 await page.getByText('Last sync:').first().waitFor({ timeout: 20000 })
 ok(true, 'cloud connection works with the strict policy on')
 
+/* ---- scanning a barcode with the camera, under the strict policy ---- */
+const usedNative = await page.evaluate(() => 'BarcodeDetector' in window)
+await page.evaluate(async (code) => {
+  const db = await new Promise((r) => { const q = indexedDB.open('pasal'); q.onsuccess = () => r(q.result) })
+  const all = await new Promise((r) => { const q = db.transaction('items').objectStore('items').getAll(); q.onsuccess = () => r(q.result) })
+  const first = all.sort((a, b) => b.sold - a.sold)[0]
+  await new Promise((r) => { const tx = db.transaction('items', 'readwrite'); tx.objectStore('items').put({ ...first, barcode: code }); tx.oncomplete = r })
+  window.__scanItem = first.nameEn
+}, BARCODE)
+const scanItemName = await page.evaluate(() => window.__scanItem)
+// the barcode was written straight into the browser's storage, so open the app again to let it read the item list afresh
+await page.reload()
+await page.locator('input[type=password]').fill('policy-pass-1')
+await page.getByRole('button', { name: 'Login', exact: true }).click()
+await page.getByText('Namaste').waitFor({ timeout: 10000 })
+await page.locator('.nav button', { hasText: 'Sale' }).click()
+await page.getByRole('button', { name: /Scan/ }).click()
+const scanned = await page.locator('.st .qty').first().waitFor({ timeout: 20000 }).then(() => true, () => false)
+if (!scanned) await page.screenshot({ path: process.env.SHOT || 'scan-fail.png' })
+if (!scanned) console.log('DIAG scanner:', JSON.stringify(await page.evaluate(() => { const v = document.querySelector('video.scan'); return { video: v && { ready: v.readyState, w: v.videoWidth, h: v.videoHeight, paused: v.paused }, notes: [...document.querySelectorAll('.note')].map((n) => n.innerText).join(' | ').slice(0, 300), csp: window.__csp } })), 'errors:', pageErrors.slice(0, 3), 'console:', violations.slice(0, 3))
+ok(scanned, 'the camera read the barcode and put the item in the cart (' + (usedNative ? 'built-in reader' : 'JavaScript reader, as on iPhone') + ')')
+ok(scanned && (await page.locator('.st').first().innerText()).includes(scanItemName), 'it was the right item: ' + scanItemName)
 /* ---- attacks ---- */
 await page.evaluate(() => { const s = document.createElement('script'); s.textContent = 'window.__pwn = 1'; document.body.appendChild(s) })
 ok((await page.evaluate(() => window.__pwn)) === undefined, 'a script injected into the page does not run')

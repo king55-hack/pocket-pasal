@@ -36,7 +36,7 @@ jobs:
       - run: npm audit --omit=dev
       - name: Local test secrets (not real keys)
         run: |
-          printf 'JWT_SECRET=dev-only-secret-change-me-0123456789abcdef\nADMIN_KEY=dev-admin-key\nDEV_RETURN_OTP=1\nSECRETS_KEY=dev-only-secrets-key-change-me-0123456789\nPUBLIC_URL=http://127.0.0.1:8787\nENABLE_MOCK_PAY=1\n' > .dev.vars
+          printf 'JWT_SECRET=dev-only-secret-change-me-0123456789abcdef\nADMIN_KEY=dev-admin-key\nDEV_RETURN_OTP=1\nSECRETS_KEY=dev-only-secrets-key-change-me-0123456789\nPUBLIC_URL=http://127.0.0.1:8787\nENABLE_MOCK_PAY=1\nMAIL_DAILY_LIMIT=5\n' > .dev.vars
       - run: npx wrangler d1 migrations apply pasal --local
       - name: Start the API and run the tests
         run: |
@@ -60,7 +60,7 @@ jobs:
       - name: Local test secrets (not real keys)
         working-directory: server
         run: |
-          printf 'JWT_SECRET=dev-only-secret-change-me-0123456789abcdef\nADMIN_KEY=dev-admin-key\nDEV_RETURN_OTP=1\nSECRETS_KEY=dev-only-secrets-key-change-me-0123456789\nPUBLIC_URL=http://127.0.0.1:8787\nENABLE_MOCK_PAY=1\n' > .dev.vars
+          printf 'JWT_SECRET=dev-only-secret-change-me-0123456789abcdef\nADMIN_KEY=dev-admin-key\nDEV_RETURN_OTP=1\nSECRETS_KEY=dev-only-secrets-key-change-me-0123456789\nPUBLIC_URL=http://127.0.0.1:8787\nENABLE_MOCK_PAY=1\nMAIL_DAILY_LIMIT=5\n' > .dev.vars
       - run: npx wrangler d1 migrations apply pasal --local
         working-directory: server
       - name: Start the API and the web app
