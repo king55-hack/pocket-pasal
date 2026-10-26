@@ -1,0 +1,22 @@
+{
+  "name": "pasal-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "db:local": "wrangler d1 migrations apply pasal --local",
+    "db:remote": "wrangler d1 migrations apply pasal --remote",
+    "deploy": "wrangler deploy",
+    "check": "tsc --noEmit",
+    "test": "node test/api.test.mjs && node test/pay.test.mjs && node test/security.test.mjs",
+    "dev:test": "wrangler dev --port 8787 --var ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173"
+  },
+  "dependencies": {
+    "hono": "^4.13.14"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261026.1",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.152.0"
+  }
+}

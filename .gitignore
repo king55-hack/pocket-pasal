@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+*.log
+.DS_Store
+Thumbs.db
+# local tooling of the editor, and anything holding keys
+.claude/
+*.local
+.secrets*
+!.dev.vars.example

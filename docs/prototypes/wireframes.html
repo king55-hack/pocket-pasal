@@ -1,0 +1,251 @@
+<title>Pasal Wireframes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root{--bg:#f3f4f1;--fg:#1f2421;--mut:#6b726d;--line:#b9beb8;--card:#fff;--fill:#e4e7e2;--acc:#1f6f5b;--warn:#b4531a;--accfg:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161a18;--fg:#e8ebe7;--mut:#9aa39c;--line:#444b46;--card:#202523;--fill:#2b312e;--acc:#4fb596;--warn:#e0894f;--accfg:#10201a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#161a18;--fg:#e8ebe7;--mut:#9aa39c;--line:#444b46;--card:#202523;--fill:#2b312e;--acc:#4fb596;--warn:#e0894f;--accfg:#10201a;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+*{box-sizing:border-box}
+.wrap{max-width:1200px;margin:0 auto}
+h1{font-size:26px;margin:0 0 6px}
+.lead{color:var(--mut);max-width:70ch;margin:0 0 24px;line-height:1.5}
+h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:36px 0 14px;border-bottom:1px solid var(--line);padding-bottom:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:22px}
+figure{margin:0;min-width:0}
+figcaption{font-size:13px;margin-top:8px;color:var(--mut);line-height:1.4}
+figcaption b{color:var(--fg)}
+.ph{border:2px solid var(--fg);border-radius:22px;background:var(--card);height:500px;display:flex;flex-direction:column;overflow:hidden;font-size:12px}
+.top{padding:10px 12px;border-bottom:1px solid var(--line);font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.body{flex:1;padding:10px 12px;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.nav{display:flex;border-top:1px solid var(--line);background:var(--fill)}
+.nav span{flex:1;text-align:center;padding:8px 0;font-size:10px;color:var(--mut)}
+.nav .on{color:var(--acc);font-weight:700}
+.in{border:1px solid var(--line);border-radius:6px;padding:8px;color:var(--mut)}
+.btn{background:var(--acc);color:var(--accfg);border-radius:8px;padding:10px;text-align:center;font-weight:700}
+.btn.o{background:none;color:var(--acc);border:1.5px solid var(--acc)}
+.btn.w{background:var(--warn);color:#fff}
+.row{display:flex;gap:8px;align-items:center;min-width:0}
+.row>.g{flex:1;min-width:0}
+.img{width:38px;height:38px;border:1px dashed var(--mut);background:var(--fill);border-radius:6px;flex:none;display:grid;place-items:center;color:var(--mut);font-size:9px}
+.img.l{width:100%;height:90px}
+.item{border:1px solid var(--line);border-radius:8px;padding:6px;display:flex;gap:8px;align-items:center}
+.item small,.mut{color:var(--mut)}
+.chip{border:1px solid var(--line);border-radius:99px;padding:3px 8px;font-size:10px;white-space:nowrap}
+.chip.on{background:var(--acc);color:var(--accfg);border-color:var(--acc)}
+.chip.w{border-color:var(--warn);color:var(--warn)}
+.stat{flex:1;border:1px solid var(--line);border-radius:8px;padding:8px}
+.stat b{display:block;font-size:16px}
+.otp{display:flex;gap:6px;justify-content:center}.otp span{width:30px;height:38px;border:1.5px solid var(--fg);border-radius:6px}
+.qr{width:110px;height:110px;margin:0 auto;border:2px solid var(--fg);background:repeating-conic-gradient(var(--fg) 0 25%,var(--card) 0 50%) 0 0/16px 16px;border-radius:4px}
+.sp{margin-top:auto}
+.tot{display:flex;justify-content:space-between;font-weight:700;font-size:14px}
+.paper{background:#fff;color:#111;border:1px dashed #888;padding:10px;font-family:ui-monospace,Consolas,monospace;font-size:10.5px;line-height:1.5}
+.paper hr{border:0;border-top:1px dashed #888;margin:4px 0}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}
+.flow span{border:1px solid var(--line);background:var(--card);padding:5px 10px;border-radius:6px}
+.note{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.55}
+.note li{margin:3px 0}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+</style>
+
+<div class="wrap">
+<h1>Pasal Wireframes</h1>
+<p class="lead">Nepal ko sano pasal (kirana) ko lagi inventory, bikri, udharo khata ra bill print app. Android ra iPhone dubai ma, offline ra online dubai ma chalne. Yo pahilo draft ho: rang, logo, naam pachi. Sample data kirana pasal ko rakhiyeko chha.</p>
+
+<h2>Screen flow</h2>
+<div class="flow"><span>Login</span>→<span>2FA code</span>→<span>Home</span>→<span>Naya bikri</span>→<span>Payment</span>→<span>Bill print</span></div>
+<div class="flow" style="margin-top:8px"><span>Register</span>→<span>Pasal ko vivaran</span>→<span>Home</span>&nbsp;|&nbsp;<span>Saman</span>→<span>Stock kam</span>→<span>Order</span>&nbsp;|&nbsp;<span>Udharo khata</span>→<span>Grahak ko hisab</span></div>
+
+<h2>A. Suru: login ra pasal register</h2>
+<div class="grid">
+<figure><div class="ph"><div class="top">Login</div><div class="body">
+<div class="img l">LOGO</div>
+<div class="in">Mobile number / email</div><div class="in">Password ••••••••</div>
+<div class="mut">Password birsiyo?</div>
+<div class="btn">Login</div>
+<div class="btn o">Fingerprint / Face ID</div>
+<div class="sp mut" style="text-align:center">Naya pasal? <b style="color:var(--acc)">Register</b></div></div></div>
+<figcaption><b>1. Login.</b> Password ra biometric. 5 palta galat vayo vane 15 minute lock.</figcaption></figure>
+
+<figure><div class="ph"><div class="top">2-step verification</div><div class="body">
+<div class="mut" style="text-align:center;margin-top:20px">98XXXXXX21 ma SMS ko 6 anka ko code gayo</div>
+<div class="otp"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+<div class="mut" style="text-align:center">Pheri pathau (00:42)</div>
+<div class="btn">Verify</div>
+<div class="mut" style="text-align:center">Authenticator app prayog garnu</div>
+<div class="note sp" style="font-size:11px">Naya phone ma login garda matra code maagchha. Pasal ko "Malik" ra "Staff" alag PIN.</div></div></div>
+<figcaption><b>2. 2FA.</b> SMS OTP, ya authenticator app. Naya device ma matra.</figcaption></figure>
+
+<figure><div class="ph"><div class="top"><span>Pasal register (1/2)</span><span class="mut">Skip ✕</span></div><div class="body">
+<div class="in">Pasal ko naam</div><div class="in">Company / firm ko naam</div>
+<div class="mut">Pasal ko type</div>
+<div class="row" style="flex-wrap:wrap"><span class="chip on">Kirana</span><span class="chip">Kapada</span><span class="chip">Pharmacy</span><span class="chip">Hardware</span><span class="chip">Stationery</span><span class="chip">Aru</span></div>
+<div class="in">PAN / VAT number (ichhik)</div>
+<div class="in">Phone number</div>
+<div class="btn sp">Aghi badhau</div></div></div>
+<figcaption><b>3. Register.</b> Type anusar suru ko saman list (sample) auto aaunchha.</figcaption></figure>
+
+<figure><div class="ph"><div class="top">Pasal register (2/2)</div><div class="body">
+<div class="in">Pradesh ▾</div><div class="in">Jilla ▾</div><div class="in">Nagarpalika / Gaupalika ▾</div><div class="in">Ward no. ra tole</div>
+<div class="row"><div class="img" style="width:100%;height:80px">Map pin</div></div>
+<div class="row"><span class="chip on">Nepali</span><span class="chip">English</span></div>
+<div class="in">Bill ma dekhine suru ko line (ex: Dhanyabad!)</div>
+<div class="btn sp">Pasal suru garau</div></div></div>
+<figcaption><b>4. Location.</b> Location le bhavisya ma supplier ra nira ko pasal dekhauna sakchha.</figcaption></figure>
+</div>
+
+<h2>B. Dainik kam: home ra bikri</h2>
+<div class="grid">
+<figure><div class="ph"><div class="top"><span>Ram Kirana Pasal</span><span class="chip on">● Online</span></div><div class="body">
+<div class="row"><div class="stat"><span class="mut">Aaja ko bikri</span><b>Rs 12,450</b></div><div class="stat"><span class="mut">Naafa</span><b>Rs 1,820</b></div></div>
+<div class="row"><div class="stat"><span class="mut">Udharo baki</span><b>Rs 38,200</b></div><div class="stat"><span class="mut" style="color:var(--warn)">Stock kam</span><b style="color:var(--warn)">7 saman</b></div></div>
+<div class="btn">+ Naya bikri</div>
+<div class="row"><div class="btn o g">+ Saman</div><div class="btn o g">+ Udharo</div></div>
+<div class="mut">Haal ko bikri</div>
+<div class="item"><div class="g">Bill #214 · Sita Didi<br><small>10:42 · Cash</small></div><b>Rs 540</b></div>
+<div class="item"><div class="g">Bill #213 · Walk-in<br><small>10:15 · QR</small></div><b>Rs 215</b></div></div>
+<div class="nav"><span class="on">Home</span><span>Bikri</span><span>Saman</span><span>Khata</span><span>Aru</span></div></div>
+<figcaption><b>5. Home.</b> Aaja ko hisab ek nazar ma. Hara/rato sanket le online/offline dekhaunchha.</figcaption></figure>
+
+<figure><div class="ph"><div class="top"><span>Naya bikri</span><span class="mut">Bill #215</span></div><div class="body">
+<div class="row"><div class="in g">🔍 Saman khoja / barcode scan</div></div>
+<div class="row" style="overflow:hidden"><span class="chip on">Sabai</span><span class="chip">Chamal</span><span class="chip">Tel</span><span class="chip">Biscuit</span><span class="chip">Pan</span></div>
+<div class="item"><div class="img">photo</div><div class="g">Wai Wai noodles<br><small>Rs 25 · stock 84</small></div><span class="chip">− 4 +</span></div>
+<div class="item"><div class="img">photo</div><div class="g">Dhaara tel 1L<br><small>Rs 245 · stock 12</small></div><span class="chip">− 1 +</span></div>
+<div class="item"><div class="img">photo</div><div class="g">Tata Tea 250g<br><small>Rs 160 · stock 3</small></div><span class="chip w">− 0 +</span></div>
+<div class="sp"><div class="tot"><span>Jamma (5 saman)</span><span>Rs 345</span></div></div>
+<div class="btn">Bhuktani garau →</div></div></div>
+<figcaption><b>6. Naya bikri.</b> Photo dekhera tap garera thapne. Offline ma pani chalchha.</figcaption></figure>
+
+<figure><div class="ph"><div class="top">Bhuktani</div><div class="body">
+<div style="text-align:center"><span class="mut">Kul rakam</span><div style="font-size:26px;font-weight:700">Rs 345</div></div>
+<div class="row"><span class="chip on">Cash</span><span class="chip">QR</span><span class="chip">Card</span><span class="chip">Udharo</span></div>
+<div class="in">Grahak ley dieko: Rs 500</div>
+<div class="tot"><span>Pheri dine</span><span style="color:var(--acc)">Rs 155</span></div>
+<div class="mut">QR: eSewa / Khalti / FonePay / IME Pay</div>
+<div class="qr"></div>
+<div class="mut" style="text-align:center">Bhuktani aayepachi auto confirm</div>
+<div class="btn sp">Bhuktani sakyo</div></div></div>
+<figcaption><b>7. Payment.</b> Cash, QR, card, udharo. Dherai tarika ma aadha-aadha tirna milchha (split).</figcaption></figure>
+
+<figure><div class="ph"><div class="top"><span>Bill print</span><span class="chip on">🖨 Connected</span></div><div class="body">
+<div class="paper"><center><b>RAM KIRANA PASAL</b><br>Kathmandu-10, Baneshwor<br>PAN: 123456789</center><hr>
+Bill #215 &nbsp; 25 Kartik<hr>
+Wai Wai ×4 &nbsp;&nbsp;&nbsp;&nbsp;100<br>Dhaara tel ×1 &nbsp;245<hr>
+<b>JAMMA &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;345</b><br>Cash &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;500<br>Pheri &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;155<hr><center>Dhanyabad! Pheri aunu hola</center></div>
+<div class="btn">Print garau</div><div class="btn o">WhatsApp / SMS ma pathau</div><div class="btn o">PDF save</div>
+<div class="mut sp" style="text-align:center">Printer: Bluetooth 58mm thermal ▾</div></div></div>
+<figcaption><b>8. Bill.</b> Bluetooth mobile printer sanga jodne. Printer nabhaye SMS/PDF.</figcaption></figure>
+</div>
+
+<h2>C. Saman, stock ra order</h2>
+<div class="grid">
+<figure><div class="ph"><div class="top"><span>Saman</span><span class="btn" style="padding:4px 10px">+ Naya</span></div><div class="body">
+<div class="in">🔍 Khoja</div>
+<div class="row"><span class="chip on">Sabai 142</span><span class="chip w">Stock kam 7</span><span class="chip">Sakiyo 2</span></div>
+<div class="item"><div class="img">photo</div><div class="g">Wai Wai noodles<br><small>Kharid 21 · Bikri 25</small></div><b>84</b></div>
+<div class="item" style="border-color:var(--warn)"><div class="img">photo</div><div class="g">Tata Tea 250g<br><small style="color:var(--warn)">Kam: min 10</small></div><b style="color:var(--warn)">3</b></div>
+<div class="item" style="border-color:var(--warn)"><div class="img">photo</div><div class="g">Chini 1kg<br><small style="color:var(--warn)">Kam: min 20</small></div><b style="color:var(--warn)">8</b></div>
+<div class="item"><div class="img">photo</div><div class="g">Dhaara tel 1L<br><small>Kharid 220 · Bikri 245</small></div><b>12</b></div></div>
+<div class="nav"><span>Home</span><span>Bikri</span><span class="on">Saman</span><span>Khata</span><span>Aru</span></div></div>
+<figcaption><b>9. Saman list.</b> Stock kam bhayeko rato border le dekhauchha.</figcaption></figure>
+
+<figure><div class="ph"><div class="top">Naya saman thapne</div><div class="body">
+<div class="row"><div class="img" style="width:70px;height:70px">📷 Photo</div><div class="g"><div class="in">Saman ko naam</div></div></div>
+<div class="row"><span class="chip on">Sample list bata chanau</span></div>
+<div class="row"><div class="in g">Kharid mulya</div><div class="in g">Bikri mulya</div></div>
+<div class="row"><div class="in g">Abhi stock</div><div class="in g">Kam bhayo bhane (min)</div></div>
+<div class="row"><div class="in g">Ekai (pkt/kg/pcs)</div><div class="in g">Barcode scan</div></div>
+<div class="in">Category ▾ &nbsp; Supplier ▾</div>
+<div class="in">Expiry miti (ichhik)</div>
+<div class="btn sp">Save</div></div></div>
+<figcaption><b>10. Saman thapne.</b> Photo khichne, gallery bata, ya Nepal ko lokpriya saman ko sample list bata.</figcaption></figure>
+
+<figure><div class="ph"><div class="top"><span>Naya saman list</span><span class="mut">Kirana</span></div><div class="body">
+<div class="in">🔍 Khoja</div>
+<div class="row" style="flex-wrap:wrap"><span class="chip on">Noodles</span><span class="chip">Chiya</span><span class="chip">Tel</span><span class="chip">Biscuit</span><span class="chip">Sabun</span></div>
+<div class="item"><span>☑</span><div class="img">photo</div><div class="g">Wai Wai · Rara noodles</div></div>
+<div class="item"><span>☑</span><div class="img">photo</div><div class="g">Tata Tea · Himalayan Tea</div></div>
+<div class="item"><span>☐</span><div class="img">photo</div><div class="g">Dabur Honey · Sunsilk</div></div>
+<div class="item"><span>☑</span><div class="img">photo</div><div class="g">Gorkha beer · Coke</div></div>
+<div class="mut">3 chaninyo. Mulya pachi halne.</div>
+<div class="btn sp">Mero pasal ma thapau</div></div></div>
+<figcaption><b>11. Sample saman.</b> Photo sahit tayar list. Pasal ko type anusar badlinchha.</figcaption></figure>
+
+<figure><div class="ph"><div class="top"><span>Order garne</span><span class="chip w">7 kam</span></div><div class="body">
+<div class="mut">Supplier anusar</div>
+<div class="item" style="flex-direction:column;align-items:stretch"><b>Sharma Wholesale · 9841XXXXXX</b>
+<div class="row"><div class="g">Tata Tea (3 chha)</div><span class="chip">− 24 +</span></div>
+<div class="row"><div class="g">Chini (8 chha)</div><span class="chip">− 50 +</span></div></div>
+<div class="item" style="flex-direction:column;align-items:stretch"><b>Everest Traders</b>
+<div class="row"><div class="g">Dhaara tel (12 chha)</div><span class="chip">− 20 +</span></div></div>
+<div class="tot sp"><span>Anumanit kharcha</span><span>Rs 9,880</span></div>
+<div class="btn">WhatsApp ma order pathau</div><div class="btn o">Order list save</div></div></div>
+<figcaption><b>12. Order.</b> Stock kam bhayeko saman ko list supplier le chhutyaera, message ma pathaune.</figcaption></figure>
+</div>
+
+<h2>D. Udharo khata ra hisab</h2>
+<div class="grid">
+<figure><div class="ph"><div class="top"><span>Udharo khata</span><span class="btn" style="padding:4px 10px">+ Grahak</span></div><div class="body">
+<div class="stat"><span class="mut">Jamma baki</span><b>Rs 38,200 · 14 jana</b></div>
+<div class="in">🔍 Grahak khoja</div>
+<div class="item"><div class="g">Sita Didi<br><small>Antim: 20 Kartik</small></div><b style="color:var(--warn)">Rs 4,500</b></div>
+<div class="item"><div class="g">Hari Dai<br><small>Antim: 2 Kartik</small></div><b style="color:var(--warn)">Rs 12,300</b></div>
+<div class="item"><div class="g">Maya Auntie<br><small>Antim: 24 Kartik</small></div><b>Rs 870</b></div>
+<div class="item"><div class="g">Bishnu Sir<br><small>Antim: 15 Asoj</small></div><b>Rs 2,100</b></div></div>
+<div class="nav"><span>Home</span><span>Bikri</span><span>Saman</span><span class="on">Khata</span><span>Aru</span></div></div>
+<figcaption><b>13. Khata list.</b> Kasle kati tirna baki chha, ek thau ma.</figcaption></figure>
+
+<figure><div class="ph"><div class="top"><span>← Sita Didi</span><span class="mut">98XXXXXXXX</span></div><div class="body">
+<div class="stat" style="text-align:center"><span class="mut">Tirna baki</span><b style="font-size:24px;color:var(--warn)">Rs 4,500</b></div>
+<div class="item"><div class="g">20 Kartik · Bill #198<br><small>Udharo</small></div><b>+ 1,200</b></div>
+<div class="item"><div class="g">12 Kartik · Tireko<br><small>Cash</small></div><b style="color:var(--acc)">− 2,000</b></div>
+<div class="item"><div class="g">5 Kartik · Bill #170<br><small>Udharo</small></div><b>+ 5,300</b></div>
+<div class="row sp"><div class="btn g">Paisa liyo</div><div class="btn o g">Yaad dilau SMS</div></div>
+<div class="btn o">+ Naya udharo</div></div></div>
+<figcaption><b>14. Grahak ko hisab.</b> Udharo ra tireko ko itihas, SMS bata yaad.</figcaption></figure>
+
+<figure><div class="ph"><div class="top">Hisab-kitab</div><div class="body">
+<div class="row"><span class="chip">Aaja</span><span class="chip on">Yo hapta</span><span class="chip">Mahina</span></div>
+<div class="stat"><span class="mut">Kul bikri</span><b>Rs 78,300</b></div>
+<div class="mut">Bhuktani tarika anusar</div>
+<div class="row"><div class="g">Cash</div><div style="flex:2;height:10px;background:var(--acc);width:62%"></div><b>48,500</b></div>
+<div class="row"><div class="g">QR</div><div style="flex:2;height:10px;background:var(--acc);opacity:.6;width:30%"></div><b>23,000</b></div>
+<div class="row"><div class="g">Card</div><div style="flex:2;height:10px;background:var(--acc);opacity:.35;width:10%"></div><b>6,800</b></div>
+<div class="row"><div class="g">Udharo</div><div style="flex:2;height:10px;background:var(--warn);width:18%"></div><b>14,200</b></div>
+<div class="mut">Sabbhanda dherai bikne</div>
+<div class="item"><div class="g">1. Wai Wai</div><b>312</b></div>
+<div class="item"><div class="g">2. Chini</div><b>96 kg</b></div>
+<div class="btn o sp">Excel / PDF ma nikalne</div></div></div>
+<figcaption><b>15. Report.</b> Cash, QR, card, udharo alag-alag. Naafa ra sabbhanda dherai bikne saman.</figcaption></figure>
+
+<figure><div class="ph"><div class="top">Aru (Settings)</div><div class="body">
+<div class="item"><div class="g">Sync sthiti<br><small>Antim: 2 minute aghi · 0 baki</small></div><span class="chip on">● Online</span></div>
+<div class="item"><div class="g">Staff ra pahunch</div><span>›</span></div>
+<div class="item"><div class="g">Printer jodne</div><span>›</span></div>
+<div class="item"><div class="g">QR / payment khata</div><span>›</span></div>
+<div class="item"><div class="g">Security: 2FA, device</div><span>›</span></div>
+<div class="item"><div class="g">Backup ra restore</div><span>›</span></div>
+<div class="item"><div class="g">Bhasha: Nepali / English</div><span>›</span></div>
+<div class="item"><div class="g">Supplier haru</div><span>›</span></div>
+<div class="note sp" style="font-size:11px"><b>Offline:</b> internet nabhaye pani bikri, stock, khata sabai chalchha. Internet aayepachi aafai sync.</div></div>
+<div class="nav"><span>Home</span><span>Bikri</span><span>Saman</span><span>Khata</span><span class="on">Aru</span></div></div>
+<figcaption><b>16. Aru.</b> Sync sthiti, staff, printer, security.</figcaption></figure>
+</div>
+
+<h2>Prabidhi sujhab (pachi nirnaya garne)</h2>
+<div class="two">
+<div class="note"><b>App ra database</b>
+<ul><li>Ek code le Android ra iPhone dubai: Flutter (ya React Native).</li>
+<li>Phone ma local database (SQLite), jun le offline ma kam garchha.</li>
+<li>Online bhayepachi server (PostgreSQL) sanga sync.</li>
+<li>Backend: API + login + sync. Nepal ko lagi Nepali miti (BS) ra Rs format.</li></ul></div>
+<div class="note"><b>Security</b>
+<ul><li>Password + 2FA (SMS OTP / authenticator), biometric.</li>
+<li>Data encrypted (phone ra server dubai), HTTPS matra.</li>
+<li>Malik ra staff ko alag pahunch; kun ले ke gareko log.</li>
+<li>Card/QR ko paisa seedha eSewa/Khalti/FonePay/bank jastai provider bata; app le card number rakhdaina.</li>
+<li>Din-din backup.</li></ul></div>
+</div>
+<p class="lead" style="margin-top:20px">Agla kadam: yo wireframe ma ke badlane, ke thapne bhana. Tyas pachi app ko naam, logo ra rang, ani build suru.</p>
+</div>
