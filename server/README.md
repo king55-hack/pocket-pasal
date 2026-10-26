@@ -7,7 +7,7 @@ Cloudflare was picked because it needs no server to look after and the free tier
     npm install
     npm run db:local        # creates the local database
     npm run dev             # http://127.0.0.1:8787
-    node test/api.test.mjs  # 34 checks against the running server
+    npm test                # api (34), payments (28) and attack-style security (51) checks against the running server
 
 `.dev.vars` holds local-only secrets and `DEV_RETURN_OTP=1`, which makes the API return the email code in the response
 so you can test without sending mail. Never set `DEV_RETURN_OTP` in production.

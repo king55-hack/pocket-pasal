@@ -41,7 +41,7 @@ app.use('*', async (c, next) => {
 export async function body<T = any>(c: Context<App>): Promise<T | null> {
   try { return (await c.req.json()) as T } catch { return null }
 }
-export const bad = (c: Context<App>, status: 400 | 401 | 403 | 404 | 409 | 429, error: string) => c.json({ error }, status)
+export const bad = (c: Context<App>, status: 400 | 401 | 403 | 404 | 409 | 429 | 503, error: string) => c.json({ error }, status)
 
 /* ---------- plan ---------- */
 function effectivePlan(s: { plan: string; plan_until: number; trial_ends: number }) {
@@ -64,7 +64,12 @@ async function issueOtp(env: Env, email: string, purpose: 'signup' | 'login') {
   await env.DB.prepare('INSERT INTO otps (email,purpose,code_hash,expires,created_at) VALUES (?,?,?,?,?)')
     .bind(email, purpose, await sha256(`${code}:${email}:${env.JWT_SECRET}`), now + 10 * 60_000, now).run()
   const m = otpMail(code)
-  await sendMail(env, email, m.subject, m.text)
+  const sent = await sendMail(env, email, m.subject, m.text)
+  if (!sent && env.DEV_RETURN_OTP !== '1') {
+    // No way to deliver the code: say so now instead of leaving the person waiting for an email that will never come.
+    await env.DB.prepare('DELETE FROM otps WHERE email=? AND created_at=?').bind(email, now).run()
+    return { error: 'mail' as const }
+  }
   return { ok: true as const, devCode: env.DEV_RETURN_OTP === '1' ? code : undefined }
 }
 async function checkOtp(env: Env, email: string, purpose: string, code: unknown) {
@@ -105,7 +110,7 @@ app.post('/auth/otp', async (c) => {
   // For login do not reveal whether the email has an account.
   if (b.purpose === 'login' && !exists) return c.json({ ok: true })
   const r = await issueOtp(c.env, email, b.purpose)
-  if ('error' in r) return bad(c, 429, 'rate')
+  if ('error' in r) return r.error === 'mail' ? bad(c, 503, 'mail') : bad(c, 429, 'rate')
   return c.json({ ok: true, devCode: r.devCode })
 })
 
@@ -143,6 +148,7 @@ app.post('/auth/login', async (c) => {
     // A phone we have not seen before must prove it has the email inbox.
     if (!b.code) {
       const r = await issueOtp(c.env, email, 'login')
+      if ('error' in r && r.error === 'mail') return bad(c, 503, 'mail')
       return c.json({ error: 'otp_required', devCode: 'error' in r ? undefined : r.devCode }, 401)
     }
     if (!(await checkOtp(c.env, email, 'login', b.code))) return bad(c, 401, 'bad_code')

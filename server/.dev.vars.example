@@ -4,3 +4,4 @@ DEV_RETURN_OTP=1
 SECRETS_KEY=dev-only-secrets-key-change-me-0123456789
 PUBLIC_URL=http://127.0.0.1:8787
 ENABLE_MOCK_PAY=1
+ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173

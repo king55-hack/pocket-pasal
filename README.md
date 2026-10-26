@@ -5,6 +5,11 @@ Runs in any browser and installs on Android like an app (a PWA). Nepali first, E
 
 > All rights reserved. This repository is public so the work can be read and checked. It is not licensed for reuse or resale.
 
+## Live
+- App: https://pocket-pasal.dahal-khani.workers.dev (open it on Android Chrome, menu, Install app)
+- API: https://pocket-pasal-api.dahal-khani.workers.dev
+- The app works fully on the phone without the server. Cloud sync and login need the email sender (Resend) to be connected first, see below.
+
 ## What it does
 - Sell: search or camera barcode scan, tax invoice (13% VAT) or cash receipt, cash / QR / card / credit, split into categories, best sellers first.
 - Search that works from an English keyboard on Nepali names (`chini`, `tel`, `dudh`, `wai`).
@@ -42,6 +47,7 @@ cd app && npm install && npm run dev  # http://localhost:5173
 | `cd server && npm test` | 113 API checks: login and codes, sync rules, payments, and attack-style security tests |
 | `cd app && node e2e/shop2.mjs` | 55 browser checks: a new pharmacy end to end, a second phone, offline sale, cloud, QR, staff, backup, plan locks |
 | `cd app && npm run build:prod && node e2e/security.mjs` | 18 front-end security checks under the strict content policy |
+| `API=… ORIGIN=… node server/test/prod-smoke.mjs` and `SITE=… node app/e2e/prod-check.mjs` | Safe checks of the live API and the live site (they create no account) |
 
 The browser tests drive a real Chrome (`CHROME=/path/to/chrome`) and need the API and the app running as above.
 GitHub Actions runs all of them on every push (`.github/workflows/ci.yml`).
@@ -49,7 +55,8 @@ GitHub Actions runs all of them on every push (`.github/workflows/ci.yml`).
 ## Put it online (Cloudflare)
 See [server/README.md](server/README.md). In short: `wrangler d1 create`, set three secrets, `wrangler deploy`, then build the app with
 `VITE_API_URL=<api address> npm run build:prod` and publish `app/dist` to Cloudflare Pages (it includes the `_headers` file with the security policy).
-Emails need a sender: set `RESEND_API_KEY` and a verified `MAIL_FROM`, otherwise the codes cannot be delivered.
+Emails need a sender: `npx wrangler secret put RESEND_API_KEY` and a verified `MAIL_FROM` in `server/wrangler.toml`. Until then the API answers "email service is not ready" instead of pretending a code was sent.
+The website is a Workers static-assets deployment (`app/wrangler.toml`): `cd app && VITE_API_URL=<api> npm run build:prod && npx wrangler deploy`.
 
 ## Security in short
 - Passwords and PINs are stored as salted PBKDF2 hashes. Login codes expire in 10 minutes, allow 5 guesses and are sent by email.

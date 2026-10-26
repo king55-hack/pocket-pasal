@@ -8,6 +8,7 @@ import { enqueueAll } from '../sync'
 export function errText(e: ApiError, t: (a: string, b: string) => string) {
   switch (e.code) {
     case 'network': return t('इन्टरनेट वा सर्भर नपुगेर भएन। पछि फेरि प्रयास गर्नुस्।', 'Could not reach the server. Check the internet and try again.')
+    case 'mail': return t('इमेल पठाउने सेवा अझै तयार छैन। केही बेरपछि फेरि प्रयास गर्नुस्।', 'The email service is not ready yet. Please try again later.')
     case 'rate': return t('धेरै कोड मागियो। एक घण्टापछि फेरि प्रयास गर्नुस्।', 'Too many codes asked. Try again in an hour.')
     case 'bad_code': return t('कोड मिलेन वा म्याद सकियो।', 'The code is wrong or has expired.')
     case 'bad_login': return t('इमेल वा पासवर्ड मिलेन।', 'Wrong email or password.')
