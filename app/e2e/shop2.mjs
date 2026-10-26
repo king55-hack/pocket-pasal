@@ -42,6 +42,13 @@ async function outboxEmpty(pg, ms = 30000) {
   while (Date.now() < end) { if ((await dump(pg, 'outbox')).length === 0) return; await sleep(400) }
   throw new Error('outbox did not empty')
 }
+/** Wait until a value settles on what we expect (screens update a moment after typing or tapping). */
+async function settles(get, want, ms = 4000) {
+  const end = Date.now() + ms
+  let v = await get()
+  while (v !== want && Date.now() < end) { await sleep(150); v = await get() }
+  return v === want
+}
 const waitText = (page, text, timeout = 10000) => page.getByText(text).first().waitFor({ timeout })
 
 /* ============ PHONE 1: set up a new pharmacy ============ */
@@ -112,10 +119,10 @@ ok(mvSum === 200, 'opening stock is recorded as a stock move')
 await nav(p, 'Sale')
 const search = p.getByPlaceholder('Search item (Nepali or English)')
 await search.fill('para')
-ok((await p.locator('.card').count()) === 1, 'search "para" finds Paracetamol')
+ok(await settles(() => p.locator('.card').count(), 1), 'search "para" finds Paracetamol')
 await search.fill('')
 await p.getByRole('button', { name: /Tablets/ }).click()
-ok((await p.locator('.card').count()) === 2, 'the Tablets category button shows only its 2 items')
+ok(await settles(() => p.locator('.card').count(), 2), 'the Tablets category button shows only its 2 items')
 
 /* ============ tax invoice, cash ============ */
 await search.fill('para')
