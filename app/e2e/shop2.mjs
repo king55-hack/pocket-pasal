@@ -137,12 +137,13 @@ const bigPhoto = Buffer.from(await p.evaluate(() => {
 await addItem('Bandage roll', 'Health supplies', 20, 35, 3, 5, bigPhoto)
 await addItem('<img src=x onerror=alert(1)>', 'Tablets', 5, 10, 10, 2)
 await nav(p, 'Items')
-const items = await dump(p, 'items')
+let items = await dump(p, 'items')
 const itemOf = (n) => items.find((i) => i.nameEn === n)
 ok(items.length === 4 && itemOf('Paracetamol 500mg').stock === 200 && itemOf('Paracetamol 500mg').vat === true, '4 items added through the form, VAT on by default')
 {
+  for (let i = 0; i < 40 && !itemOf('Bandage roll').photo; i++) { await sleep(250); items = await dump(p, 'items') }
   const photo = itemOf('Bandage roll').photo
-  const dims = await p.evaluate((u) => new Promise((r) => { const i = new Image(); i.onload = () => r([i.naturalWidth, i.naturalHeight]); i.src = u }), photo)
+  const dims = await p.evaluate((u) => new Promise((r) => { const i = new Image(); i.onload = () => r([i.naturalWidth, i.naturalHeight]); i.onerror = () => r([0, 0]); setTimeout(() => r([0, 0]), 10000); i.src = u }), photo)
   ok(bigPhoto.length > 150000 && photo && photo.length <= 52000 && Math.max(...dims) >= 360 && Math.max(...dims) <= 720, `a ${(bigPhoto.length / 1e6).toFixed(1)} MB camera photo is kept clear (${dims.join(' x ')} px) and small (${Math.round(photo.length / 1000)} KB, fits the sync limit)`)
 }
 ok((await p.locator('img[src="x"]').count()) === 0 && (await p.getByText('<img src=x onerror=alert(1)>').count()) >= 1 && dialogs.length === 0, 'an item named with HTML shows as plain text and runs nothing')
