@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp } from './ctx'
 import { billRows, drawRows, widthPx } from './escpos'
 import { PROVINCES, SHOP_TYPES } from './data'
+import { KIND_NAME, loadPlaces, type Place } from './placesData'
 import type { Invoice } from './types'
 
 /** A password or PIN box with an eye button, so the person can see what they typed (and fix a typing mistake). */
@@ -25,11 +26,11 @@ export function Toggle({ on, onChange, label }: { on: boolean; onChange: () => v
   )
 }
 
-export function Photo({ src, size }: { src?: string; size?: number }) {
+export function Photo({ src, size, icon }: { src?: string; size?: number; icon?: string }) {
   const { t } = useApp()
   return (
     <div className="photo" style={size ? { width: size, height: size } : undefined}>
-      {src ? <img src={src} alt="" /> : <span aria-label={t('फोटो', 'photo')}>📦</span>}
+      {src ? <img src={src} alt="" /> : <span aria-label={t('फोटो', 'photo')}>{icon || '📦'}</span>}
     </div>
   )
 }
@@ -39,17 +40,19 @@ export function useReceipt(inv: Invoice) {
   const { s, t, n, m, date } = useApp()
   return useMemo(() => {
     const rows = billRows(inv, s, s.lang, { m, n, date })
+    // `canvas` is what is printed or turned into a PDF (the chosen paper width). `url` is only for looking at on screen: always a phone-friendly
+    // width, drawn twice as sharp, so an 80 mm or A4 bill does not shrink into an unreadable strip.
     const canvas = drawRows(rows, widthPx(s.paper))
-    return { canvas, url: canvas.toDataURL('image/png') }
+    const preview = drawRows(rows, 360, 2)
+    return { canvas, url: preview.toDataURL('image/png') }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inv, s, t, n, m, date])
 }
 export function Receipt({ inv }: { inv: Invoice }) {
   const { url } = useReceipt(inv)
-  const { s } = useApp()
   return (
     <div className="receipt">
-      <img src={url} alt="bill" style={{ width: widthPx(s.paper) > 600 ? '100%' : undefined }} />
+      <img src={url} alt="bill" style={{ width: '100%', maxWidth: 520 }} />
     </div>
   )
 }
@@ -132,11 +135,39 @@ export function ShopFields({ v, set }: { v: ShopFieldValues; set: (k: keyof Shop
             <option value="">{prov ? t('— छान्नुस् —', '— choose —') : t('पहिले प्रदेश छान्नुस्', 'Choose province first')}</option>
             {prov?.districts.map(([ne, en]) => <option key={ne} value={ne}>{t(ne, en)}</option>)}</select></label>
       </div>
-      <div className="row">
-        <label className="f g">{t('नगरपालिका / गाउँपालिका', 'Municipality')}<input className="in" value={v.muni} onChange={(e) => set('muni', e.target.value)} /></label>
-        <label className="f" style={{ width: 96 }}>{t('वडा', 'Ward')}
-          <select className="in" value={v.ward} onChange={(e) => set('ward', e.target.value)}><option value="">—</option>{Array.from({ length: 35 }, (_, i) => <option key={i} value={String(i + 1)}>{String(i + 1)}</option>)}</select></label>
-      </div>
+      <PlaceFields v={v} set={set} />
+    </>
+  )
+}
+
+/** Municipality or rural municipality of the chosen district (all 753 in Nepal), then the ward, limited to the wards it really has. */
+function PlaceFields({ v, set }: { v: ShopFieldValues; set: (k: keyof ShopFieldValues, val: string) => void }) {
+  const { t, n } = useApp()
+  const [places, setPlaces] = useState<Record<string, Place[]> | null>(null)
+  useEffect(() => { loadPlaces().then(setPlaces) }, [])
+  const list = places?.[v.district] ?? []
+  const found = list.find((p) => p[0] === v.muni)
+  const other = !!v.muni && !found && places !== null
+  const [forceOther, setForceOther] = useState(false)
+  const typed = forceOther || other
+  const wards = found ? found[3] : 35
+  return (
+    <>
+      <label className="f">{t('नगरपालिका / गाउँपालिका', 'Municipality / rural municipality')}
+        <select className="in" value={typed ? '__other' : v.muni} disabled={!v.district} onChange={(e) => {
+          if (e.target.value === '__other') { setForceOther(true); set('muni', ''); set('ward', '') }
+          else { setForceOther(false); set('muni', e.target.value); set('ward', '') }
+        }}>
+          <option value="">{v.district ? (places ? t('— छान्नुस् —', '— choose —') : '…') : t('पहिले जिल्ला छान्नुस्', 'Choose district first')}</option>
+          {list.map((p) => <option key={p[0]} value={p[0]}>{t(p[0] + ' ' + KIND_NAME[p[2]][0], p[1] + ' ' + KIND_NAME[p[2]][1])} · {n(p[3])} {t('वडा', 'wards')}</option>)}
+          <option value="__other">{t('सूचीमा छैन (आफैँ लेख्नुस्)', 'Not in the list (type it)')}</option>
+        </select></label>
+      {typed && <input className="in" placeholder={t('नगरपालिका / गाउँपालिकाको नाम', 'Name of the municipality')} value={v.muni} onChange={(e) => set('muni', e.target.value)} />}
+      <label className="f">{t('वडा नं.', 'Ward no.')}{found ? <small className="mut"> ({t(n(wards) + ' वडा छन्', n(wards) + ' wards')})</small> : null}
+        <select className="in" value={v.ward} disabled={!v.muni} onChange={(e) => set('ward', e.target.value)}>
+          <option value="">{v.muni ? '—' : t('पहिले नगरपालिका छान्नुस्', 'Choose municipality first')}</option>
+          {Array.from({ length: wards }, (_, i) => <option key={i} value={String(i + 1)}>{n(i + 1)}</option>)}
+        </select></label>
     </>
   )
 }

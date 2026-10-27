@@ -71,6 +71,12 @@ jobs:
       - name: New shop, two phones, offline, cloud
         working-directory: app
         run: CHROME=/usr/bin/google-chrome node e2e/shop2.mjs
+      - name: Phones and tablets (iPhone, Android, iPad sizes)
+        working-directory: app
+        run: CHROME=/usr/bin/google-chrome node e2e/mobile.mjs
+      - name: Admin page
+        working-directory: app
+        run: CHROME=/usr/bin/google-chrome node e2e/admin.mjs
       - name: Front-end security (strict policy, framing, injection)
         working-directory: app
         run: |

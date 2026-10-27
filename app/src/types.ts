@@ -27,6 +27,8 @@ export interface Category {
   nameNe: string
   nameEn: string
   active: boolean
+  /** A small picture (emoji) shown on items that have no photo. */
+  icon?: string
   updatedAt?: number
 }
 /** What a staff member may do. The owner can do everything. Checked inside the app on the phone. */

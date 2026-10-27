@@ -6,6 +6,8 @@ import { otpMail, sendMail, type Env } from './mail'
 import { sync } from './sync'
 import { pay } from './pay'
 import { send } from './send'
+import { account } from './account'
+import { admin, runDueDeletions } from './admin'
 
 export type App = { Bindings: Env; Variables: { owner: string; shop: string; dev: string } }
 const app = new Hono<App>()
@@ -182,6 +184,7 @@ app.use('/pay/config', auth)
 app.use('/pay/create', auth)
 app.use('/pay/status/*', auth)
 app.use('/send/*', auth)
+app.use('/account/*', auth)
 
 async function auth(c: Context<App>, next: () => Promise<void>) {
   const h = c.req.header('Authorization') ?? ''
@@ -227,23 +230,17 @@ app.post('/support', async (c) => {
 app.route('/sync', sync)
 app.route('/pay', pay)
 app.route('/send', send)
-
-/* ---------- seller tools: set a shop's plan after you receive their payment ---------- */
-app.post('/admin/plan', async (c) => {
-  const key = c.req.header('x-admin-key') ?? ''
-  if (!c.env.ADMIN_KEY || !safeEqual(key, c.env.ADMIN_KEY)) return bad(c, 403, 'forbidden')
-  const b = await body(c)
-  if (!b || !emailOk(b.email) || !['free', 'pro', 'max'].includes(b.plan)) return bad(c, 400, 'invalid')
-  const o = await c.env.DB.prepare('SELECT shop_id FROM owners WHERE email=?').bind(norm(b.email)).first<{ shop_id: string }>()
-  if (!o) return bad(c, 404, 'no_shop')
-  const days = Math.max(0, Math.min(3650, Number(b.days) || 30))
-  await c.env.DB.prepare('UPDATE shops SET plan=?,plan_until=? WHERE id=?').bind(b.plan, b.plan === 'free' ? 0 : Date.now() + days * DAY, o.shop_id).run()
-  // A shop that has paid should not also keep its free trial running.
-  if (b.endTrial === true) await c.env.DB.prepare('UPDATE shops SET trial_ends=0 WHERE id=?').bind(o.shop_id).run()
-  return c.json({ ok: true, shop: await shopInfo(c.env, o.shop_id) })
-})
+app.route('/account', account)
+/* ---------- seller tools: plans, closure requests, tickets (need the ADMIN_KEY) ---------- */
+app.route('/admin', admin)
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404))
 app.onError((e, c) => { console.log('error', e); return c.json({ error: 'server' }, 500) })
 
-export default app
+export default {
+  fetch: app.fetch,
+  // Every day: erase the shops whose approved closure request has reached its date.
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(runDueDeletions(env))
+  },
+}

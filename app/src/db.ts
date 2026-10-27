@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie'
+import { activeDb } from './shops'
 import type { Category, Invoice, Item, LedgerRow, Party, Purchase, StockMove, User } from './types'
 
 export interface OutboxRow {
@@ -20,8 +21,8 @@ class PasalDB extends Dexie {
   kv!: Table<{ k: string; v: unknown }, string>
   outbox!: Table<OutboxRow, number>
 
-  constructor() {
-    super('pasal')
+  constructor(name: string) {
+    super(name)
     this.version(1).stores({
       items: 'id,barcode,sold,active',
       parties: 'id,type',
@@ -37,7 +38,7 @@ class PasalDB extends Dexie {
   }
 }
 
-export const db = new PasalDB()
+export const db = new PasalDB(activeDb())
 
 export const uid = () => crypto.randomUUID()
 

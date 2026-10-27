@@ -3,6 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useApp } from '../ctx'
 import { db, kvGet, kvSet, queue } from '../db'
 import { authed } from '../api'
+import { makeBackup, restoreBackup } from '../backup'
+import { saveFile } from '../share'
 import { createUser, PLANREQ, setPerms, setSecret, STAFF_LIMIT } from '../logic'
 import { PwInput, ShopFields, Toggle } from '../components'
 import { btSupported, connectPrinter } from '../escpos'
@@ -22,7 +24,7 @@ export function More() {
   const E: [string, string, string, string | null, boolean][] = [
     ['books', '📒', t('खाता र रिपोर्ट', 'Books and reports'), null, !own && perms.books], ['orders', '📋', t('अर्डर', 'Orders'), 'orders', perms.orders], ['buy', '📥', t('खरिद', 'Purchase'), 'purch', perms.purchase], ['parties', '👥', t('पार्टी', 'Parties'), null, perms.credit], ['categories', '🗂', t('सामानका वर्ग', 'Item categories'), null, perms.editItems],
     ['returns', '↩', t('फिर्ता', 'Returns'), 'returns', perms.returns !== 'off'], ['cctv', '📹', 'CCTV', 'cctv', perms.cctv], ['delivery', '🛵', t('डेलिभरी', 'Delivery'), 'delivery', own],
-    ['staff', '🧑‍💼', t('कर्मचारी', 'Staff'), 'staff', own], ['cloud', '☁', t('क्लाउड खाता', 'Cloud account'), null, own], ['payconf', '💳', t('QR भुक्तानी सेटअप', 'QR payment setup'), null, own], ['sync', '🔄', t('सिंक', 'Sync'), null, true], ['settings', '⚙', t('सेटिङ', 'Settings'), null, own], ['support', '💬', t('समस्या जानकारी', 'Report an issue'), null, true],
+    ['staff', '🧑‍💼', t('कर्मचारी', 'Staff'), 'staff', own], ['shops', '🏪', t('व्यवसाय बदल्नुस् / थप्नुस्', 'Switch or add business'), null, true], ['cloud', '☁', t('क्लाउड खाता', 'Cloud account'), null, own], ['payconf', '💳', t('QR भुक्तानी सेटअप', 'QR payment setup'), null, own], ['sync', '🔄', t('सिंक', 'Sync'), null, true], ['closeacct', '🚪', t('खाता बन्द / सेवा छोड्नुस्', 'Close account / leave'), null, own], ['settings', '⚙', t('सेटिङ', 'Settings'), null, own], ['support', '💬', t('समस्या जानकारी', 'Report an issue'), null, true],
   ]
   return (
     <div className="body">
@@ -56,30 +58,13 @@ export function Settings() {
     if (!s.mod[k] && !can(k)) { go('upgrade', { f: k }); return }
     save({ mod: { ...s.mod, [k]: !s.mod[k] } })
   }
-  // Login tokens and this phone's own id never go into a backup file, so a copied backup cannot be used to log in.
-  const LOCAL_ONLY = ['cloud', 'deviceId']
   async function backup() {
-    const dump: Record<string, unknown> = {}
-    for (const tb of db.tables) dump[tb.name] = tb.name === 'kv' ? (await db.kv.toArray()).filter((r) => !LOCAL_ONLY.includes(r.k)) : await tb.toArray()
-    const blob = new Blob([JSON.stringify(dump)], { type: 'application/json' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob); a.download = 'pasal-backup-' + new Date().toISOString().slice(0, 10) + '.json'; a.click()
+    const x = await makeBackup()
+    saveFile(x.blob, x.filename)
     toast(t('ब्याकअप फाइल बन्यो', 'Backup file created'))
   }
   async function restore(f: File) {
-    try {
-      if (f.size > 50 * 1024 * 1024) throw new Error('too big')
-      const dump = JSON.parse(await f.text())
-      const ok = dump && typeof dump === 'object' && !Array.isArray(dump) && db.tables.every((tb) => dump[tb.name] === undefined || (Array.isArray(dump[tb.name]) && dump[tb.name].every((r: unknown) => r && typeof r === 'object')))
-      if (!ok) throw new Error('bad file')
-      const keep = (await db.kv.bulkGet(LOCAL_ONLY)).filter(Boolean)
-      await db.transaction('rw', db.tables, async () => {
-        for (const tb of db.tables) { await tb.clear(); if (dump[tb.name]) await tb.bulkAdd(tb.name === 'kv' ? dump.kv.filter((r: { k: string }) => !LOCAL_ONLY.includes(r.k)) : dump[tb.name]) }
-        await db.kv.bulkPut(keep as { k: string; v: unknown }[])
-      })
-      await refresh()
-      toast(t('ब्याकअप फर्कियो', 'Backup restored'))
-    } catch { toast(t('फाइल मिलेन', 'That file did not work')) }
+    try { await restoreBackup(f); await refresh(); toast(t('ब्याकअप फर्कियो', 'Backup restored')) } catch { toast(t('फाइल मिलेन', 'That file did not work')) }
   }
   return (
     <div className="body">
@@ -105,7 +90,7 @@ export function Settings() {
       <label className="f">{t('सुरु नगद (दैनिक खाताको लागि)', 'Opening cash (for Day Book)')}<input className="in" inputMode="decimal" value={s.openingCash || ''} onChange={(e) => save({ openingCash: +e.target.value || 0 })} /></label>
       <div className="h">{t('पसलको विवरण', 'Shop details')}</div>
       <label className="f">{t('पसलको नाम', 'Shop name')}<input className="in" value={s.shopName} onChange={(e) => save({ shopName: e.target.value })} /></label>
-      <ShopFields v={s} set={(k, v) => save(k === 'province' ? { province: v, district: '' } : { [k]: v } as any)} />
+      <ShopFields v={s} set={(k, v) => save(k === 'province' ? { province: v, district: '', muni: '', ward: '' } : k === 'district' ? { district: v, muni: '', ward: '' } : { [k]: v } as any)} />
       <label className="f">PAN / VAT<input className="in" inputMode="numeric" value={s.pan} onChange={(e) => save({ pan: e.target.value })} /></label>
       <Toggle label={t('भ्याटमा दर्ता भएको पसल', 'VAT-registered shop')} on={s.vatRegistered} onChange={() => save({ vatRegistered: !s.vatRegistered })} />
       <div className="h">{t('डाटा सुरक्षा', 'Data safety')}</div>
@@ -115,6 +100,7 @@ export function Settings() {
       <input ref={file} type="file" accept="application/json" hidden onChange={(e) => e.target.files?.[0] && restore(e.target.files[0])} />
       <button className="btn o" onClick={() => go('payconf')}>💳 {t('QR भुक्तानी सेटअप', 'QR payment setup')}</button>
       <button className="btn o" onClick={() => go('sync')}>{t('सिंक स्थिति', 'Sync status')}</button>
+      <div className="note" style={{ fontSize: 12 }}>{t('श्रेय: सामानका फोटो र बारकोड Open Food Facts (openfoodfacts.org) का स्वयंसेवकहरूबाट, CC BY-SA र ODbL अन्तर्गत। नेपाल/भारतका ठाउँको सूची: sagautam5/local-states-nepal (MIT)।', 'Credits: product photos and barcodes from the Open Food Facts volunteers (openfoodfacts.org), under CC BY-SA and ODbL. Nepal places list: sagautam5/local-states-nepal (MIT).')}</div>
     </div>
   )
 }

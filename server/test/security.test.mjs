@@ -135,9 +135,10 @@ r = await call('/auth/login'); ok(r.s === 404, 'wrong HTTP method on a login rou
 r = await call('/auth/login', { method: 'POST', body: { email: { $ne: 1 }, password: ['x'], device: 5 } }); ok(r.s === 400, 'objects and arrays in place of text are refused')
 
 /* ---- 11. seller key ---- */
-r = await call('/admin/plan', { method: 'POST', body: { email: A.email, plan: 'max' } }); ok(r.s === 403, '/admin/plan without the key is refused')
-r = await call('/admin/plan?x-admin-key=dev-admin-key', { method: 'POST', body: { email: A.email, plan: 'max' } }); ok(r.s === 403, 'the admin key is not accepted in the address')
-r = await call('/admin/plan', { method: 'POST', token: A.access, body: { email: A.email, plan: 'max' } }); ok(r.s === 403, 'a shop owner token is not an admin key')
+const FAKE = { 'CF-Connecting-IP': '198.51.100.' + (stamp % 200 + 1) }
+r = await call('/admin/plan', { method: 'POST', body: { email: A.email, plan: 'max' }, headers: FAKE }); ok(r.s === 403, '/admin/plan without the key is refused')
+r = await call('/admin/plan?x-admin-key=dev-admin-key', { method: 'POST', body: { email: A.email, plan: 'max' }, headers: FAKE }); ok(r.s === 403, 'the admin key is not accepted in the address')
+r = await call('/admin/plan', { method: 'POST', token: A.access, body: { email: A.email, plan: 'max' }, headers: FAKE }); ok(r.s === 403, 'a shop owner token is not an admin key')
 
 /* ---- 12. unknown email looks the same as a real one ---- */
 const known = await call('/auth/otp', { method: 'POST', body: { email: A.email, purpose: 'login' } })

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { PwInput } from '../components'
+import { PwInput, Toggle } from '../components'
 import { useApp } from '../ctx'
 import { authed, device, post, setCloud, type ApiError } from '../api'
 import { db, kvGet } from '../db'
@@ -30,6 +30,7 @@ export function CloudScreen() {
   const [hint, setHint] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const [mergeOk, setMergeOk] = useState(false)
   const [devs, setDevs] = useState<{ id: string; name: string; revoked: number; last_seen: number }[]>([])
   const [me, setMe] = useState('')
 
@@ -57,7 +58,7 @@ export function CloudScreen() {
           if (e2.code !== 'otp_required') throw e2
           setHint(e2.data?.devCode ? 'DEV code: ' + e2.data.devCode : '')
         }
-        setHow('login'); setStep('code')
+        setHow('login'); setMergeOk(false); setStep('code')
       }
     } catch (e: any) { setErr(errText(e, t)) }
     setBusy(false)
@@ -112,9 +113,12 @@ export function CloudScreen() {
         <div className="mut">{t(email + ' मा ६ अङ्कको कोड पठाइयो', 'A 6-digit code was sent to ' + email)}</div>
         {hint && <div className="note">{hint}</div>}
         <input className="in" inputMode="numeric" maxLength={6} placeholder="______" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} style={{ textAlign: 'center', fontSize: 24, letterSpacing: 8 }} />
-        {how === 'login' && <div className="note">{t('यो इमेलको खाता पहिले नै छ। लगइन गरेर यो फोनको डाटा त्यसमा मिलाइनेछ।', 'This email already has an account. Logging in will merge this phone data into it.')}</div>}
+        {how === 'login' && (<>
+          <div className="note w">{t('यो इमेलको खाता पहिले नै छ। अर्को पसल हो भने यहाँ नजोड्नुस्, फरक इमेल प्रयोग गर्नुस्। जोड्दा यो फोनको सामान र हिसाब त्यही खाताको पसलमा मिसिन्छ।', "This email already has an account. If this is a different shop, do not connect: go back and use a different email for each business. Connecting mixes this phone's items and accounts into that account's shop.")}</div>
+          <Toggle label={t('यो उही पसल हो, मिलाउनुस्', 'This is the same shop, merge it')} on={mergeOk} onChange={() => setMergeOk(!mergeOk)} />
+        </>)}
         {err && <div className="note w">{err}</div>}
-        <button className="btn" disabled={busy || code.length !== 6} onClick={finish}>{busy ? '…' : t('जोड्नुस्', 'Connect')}</button>
+        <button className="btn" disabled={busy || code.length !== 6 || (how === 'login' && !mergeOk)} onClick={finish}>{busy ? '…' : t('जोड्नुस्', 'Connect')}</button>
         <button className="btn o" onClick={() => { setStep('start'); setErr('') }}>{t('पछाडि', 'Back')}</button>
       </>)}
     </div>
@@ -159,6 +163,7 @@ export function RestoreFlow({ onBack, onDone }: { onBack: () => void; onDone: ()
         <input className="in" inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} style={{ textAlign: 'center', fontSize: 24, letterSpacing: 8 }} />
       </>)}
       {err && <div className="note w">{err}</div>}
+      <div className="note">{t('क्लाउड खाता पुरानो फोनमा थप → क्लाउड खाता बाट बनाइएको हुनुपर्छ। त्यो बनाइएको छैन भने पुरानो फोनबाट बैकअप फाइल निकालेर पहिलो पेजमा "बैकअप फाइलबाट फर्काउनुस्" प्रयोग गर्नुस्।', 'The cloud account must have been made on the old phone (More → Cloud account). If it was not, take a backup file from the old phone and use "Restore from a backup file" on the first page.')}</div>
       <button className="btn" disabled={busy || !email.includes('@') || !pw || (needCode && code.length !== 6)} onClick={go}>{busy ? '…' : t('लगइन', 'Log in')}</button>
       <button className="btn o" onClick={onBack}>{t('पछाडि', 'Back')}</button>
     </div>

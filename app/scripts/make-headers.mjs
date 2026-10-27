@@ -11,7 +11,7 @@ const csp = [
   "script-src 'self'", // no inline or outside scripts, so injected script cannot run
   "style-src 'self' 'unsafe-inline'", // the app styles many elements inline
   "img-src 'self' data: blob: http: https:", // bill pictures, item photos, and camera pictures from the shop network
-  `connect-src 'self' ${origin}`,
+  `connect-src 'self' ${origin} https://world.openfoodfacts.org https://images.openfoodfacts.org`, // product names and pictures for a barcode
   "font-src 'self'",
   "media-src 'self' blob:",
   "worker-src 'self'",
@@ -30,6 +30,10 @@ const headers = `/*
   Permissions-Policy: camera=(self), bluetooth=(self), usb=(), geolocation=(), microphone=(), payment=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   Cross-Origin-Opener-Policy: same-origin
+
+/admin*
+  X-Robots-Tag: noindex
+  Cache-Control: no-store
 
 /index.html
   Cache-Control: no-cache

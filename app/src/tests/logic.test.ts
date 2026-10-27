@@ -97,6 +97,21 @@ describe('Nepal data', () => {
     expect(PROVINCES.find((p) => p.id === 'koshi')!.districts).toHaveLength(14)
     expect(PROVINCES.find((p) => p.id === 'bagmati')!.districts.map((d) => d[1])).toContain('Kathmandu')
   })
+  it('has all 753 local levels with their ward counts, in the right districts', async () => {
+    const places = (await import('../places.json')).default as unknown as Record<string, [string, string, string, number][]>
+    const all = Object.values(places).flat()
+    expect(all).toHaveLength(753)
+    expect(Object.keys(places)).toHaveLength(77)
+    expect(all.filter((p) => p[2] === 'MC')).toHaveLength(6)
+    expect(all.filter((p) => p[2] === 'SMC')).toHaveLength(11)
+    expect(all.filter((p) => p[2] === 'M')).toHaveLength(276)
+    expect(all.filter((p) => p[2] === 'RM')).toHaveLength(460)
+    expect(all.reduce((a, p) => a + p[3], 0)).toBe(6743)
+    expect(all.every((p) => p[3] >= 1 && p[3] <= 40 && p[0] && p[1])).toBe(true)
+    expect(places['काठमाडौँ'].find((p) => p[1] === 'Kathmandu')![3]).toBe(32)
+    // every district of the form's own list has local levels
+    for (const d of PROVINCES.flatMap((p) => p.districts)) expect(places[d[0]]?.length, d[1]).toBeGreaterThan(0)
+  })
   it('lists shop types including the shoe shop with its own categories', () => {
     expect(new Set(SHOP_TYPES.map((t) => t.id)).size).toBe(SHOP_TYPES.length)
     expect(SHOP_TYPES.find((t) => t.id === 'jutta')!.cats.length).toBeGreaterThan(3)

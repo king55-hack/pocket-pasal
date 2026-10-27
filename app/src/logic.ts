@@ -325,10 +325,10 @@ export const SAMPLE_ITEMS = [
   S('माचिस', 'Matchbox', 4, 5, 100, 20, 'pcs'),
   S('सिगरेट खुकुरी', 'Khukuri cigarette', 17, 20, 60, 20, 'pkt'),
 ]
-const SAMPLE_CATS: [string, string][] = [['नुडल्स र बिस्कुट', 'Noodles and biscuits'], ['अन्न र दाल', 'Grains and pulses'], ['तेल र मसला', 'Oil and spices'], ['चिया र चिनी', 'Tea and sugar'], ['पेय पदार्थ', 'Drinks'], ['सरसफाइ', 'Cleaning and hygiene'], ['दूध र अण्डा', 'Dairy and eggs'], ['अन्य', 'Other']]
+const SAMPLE_CATS: [string, string, string][] = [['नुडल्स र बिस्कुट', 'Noodles and biscuits', '🍜'], ['अन्न र दाल', 'Grains and pulses', '🌾'], ['तेल र मसला', 'Oil and spices', '🫙'], ['चिया र चिनी', 'Tea and sugar', '🍵'], ['पेय पदार्थ', 'Drinks', '🥤'], ['सरसफाइ', 'Cleaning and hygiene', '🧼'], ['दूध र अण्डा', 'Dairy and eggs', '🥛'], ['अन्य', 'Other', '🛒']]
 const SAMPLE_CAT = [0, 0, 2, 3, 3, 2, 1, 1, 1, 4, 4, 5, 5, 5, 0, 0, 6, 6, 7, 7]
 export async function seedSample() {
-  const cats = SAMPLE_CATS.map(([nameNe, nameEn]) => ({ id: uid(), nameNe, nameEn, active: true, updatedAt: Date.now() }))
+  const cats = SAMPLE_CATS.map(([nameNe, nameEn, icon]) => ({ id: uid(), nameNe, nameEn, icon, active: true, updatedAt: Date.now() }))
   await db.categories.bulkAdd(cats)
   for (const c of cats) await queue('categories', c.id)
   const at = Date.now()

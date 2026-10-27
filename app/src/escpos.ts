@@ -11,38 +11,40 @@ export function widthPx(paper: Settings['paper']) {
   return paper === '80' ? 576 : paper === 'a4' ? 700 : 384
 }
 
-export function drawRows(rows: Row[], w: number): HTMLCanvasElement {
-  const size = w > 400 ? 26 : 22
-  const lh = size + 8
+/** Draws the bill. `scale` makes it sharper on screen without changing its layout; the printer uses scale 1 (one pixel is one dot). */
+export function drawRows(rows: Row[], w: number, scale = 1): HTMLCanvasElement {
+  const k = scale
+  const size = (w > 400 ? 26 : 22) * k
+  const lh = size + 8 * k
   const c = document.createElement('canvas')
   const ctx = c.getContext('2d')!
-  c.width = w
-  c.height = rows.reduce((a, r) => a + (r.rule ? 12 : r.big ? lh + 10 : lh), 12)
+  c.width = Math.round(w * k)
+  c.height = Math.round(rows.reduce((a, r) => a + (r.rule ? 12 * k : r.big ? lh + 10 * k : lh), 12 * k))
   ctx.fillStyle = '#fff'
-  ctx.fillRect(0, 0, w, c.height)
+  ctx.fillRect(0, 0, c.width, c.height)
   ctx.fillStyle = '#000'
   ctx.textBaseline = 'top'
-  let y = 4
+  let y = 4 * k
   for (const r of rows) {
     if (r.rule) {
-      ctx.fillRect(0, y + 5, w, 2)
-      y += 12
+      ctx.fillRect(0, y + 5 * k, c.width, 2 * k)
+      y += 12 * k
       continue
     }
-    const px = r.big ? size + 6 : size
+    const px = r.big ? size + 6 * k : size
     ctx.font = `${r.bold || r.big ? '700 ' : ''}${px}px "Noto Sans Devanagari", "Nirmala UI", system-ui, sans-serif`
     if (r.center) {
       ctx.textAlign = 'center'
-      ctx.fillText(r.l, w / 2, y)
+      ctx.fillText(r.l, c.width / 2, y)
     } else {
       ctx.textAlign = 'left'
-      ctx.fillText(r.l, 2, y, r.r ? w - 120 : w - 4)
+      ctx.fillText(r.l, 2 * k, y, r.r ? c.width - 120 * k : c.width - 4 * k)
       if (r.r) {
         ctx.textAlign = 'right'
-        ctx.fillText(r.r, w - 2, y)
+        ctx.fillText(r.r, c.width - 2 * k, y)
       }
     }
-    y += r.big ? lh + 10 : lh
+    y += r.big ? lh + 10 * k : lh
   }
   return c
 }

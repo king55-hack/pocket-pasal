@@ -7,7 +7,7 @@ Cloudflare was picked because it needs no server to look after and the free tier
     npm install
     npm run db:local        # creates the local database
     npm run dev             # http://127.0.0.1:8787
-    npm test                # api (34), payments (28) and attack-style security (51) checks against the running server
+    npm test                # api, payments, security, email-sending and admin checks against the running server, plus unit tests for the mail builder
 
 `.dev.vars` holds local-only secrets and `DEV_RETURN_OTP=1`, which makes the API return the email code in the response
 so you can test without sending mail. Never set `DEV_RETURN_OTP` in production.
@@ -17,11 +17,45 @@ so you can test without sending mail. Never set `DEV_RETURN_OTP` in production.
     npx wrangler d1 create pasal                 # copy the database_id into wrangler.toml
     npm run db:remote
     npx wrangler secret put JWT_SECRET           # a long random string
-    npx wrangler secret put ADMIN_KEY            # your private key for /admin/plan
-    npx wrangler secret put RESEND_API_KEY       # from resend.com, so OTP emails are really sent
-    # edit wrangler.toml: ALLOWED_ORIGINS = your web app address, MAIL_FROM = an address on a domain you verified in Resend
+    npx wrangler secret put ADMIN_KEY            # your private key for the admin page and /admin/*
+    # Email: pick ONE of the two ways below
+    npx wrangler secret put RESEND_API_KEY       # (a) Resend: needs a domain you own, MAIL_FROM on that domain
+    # (b) Gmail: see "Sending email from Gmail" below
+    # edit wrangler.toml: ALLOWED_ORIGINS = your web app address, ADMIN_EMAIL = where closing requests are announced (optional)
     npm run deploy
 Then build the app with `VITE_API_URL=https://<your-worker>.workers.dev npm run build`.
+
+## Sending email from Gmail
+Resend is a mail-sending service. It needs a domain you own. If you have no domain yet, the server can send through a Gmail account instead.
+Mail then comes from that Gmail address. Gmail allows roughly 500 messages a day, which is enough for starting out.
+Do this once, yourself (never share these values in chat):
+
+1. Open console.cloud.google.com, create a project, and under *APIs & Services* enable **Gmail API**.
+2. *OAuth consent screen*: user type External, add your Gmail as the app's contact, and press **Publish app** so the status is **In production**.
+   (While it says *Testing*, Google ends the login after 7 days and mail stops.)
+3. *Credentials* > *Create credentials* > *OAuth client ID* > type **Web application**, with redirect URI `https://developers.google.com/oauthplayground`. Copy the client id and secret.
+4. Open developers.google.com/oauthplayground, press the gear, tick *Use your own OAuth credentials*, paste the id and secret.
+   In step 1 pick scope `https://www.googleapis.com/auth/gmail.send`, sign in with the Gmail that will send, then *Exchange authorization code for tokens*. Copy the **refresh token**.
+5. Put the four values on the server:
+
+       npx wrangler secret put GMAIL_CLIENT_ID
+       npx wrangler secret put GMAIL_CLIENT_SECRET
+       npx wrangler secret put GMAIL_REFRESH_TOKEN
+       npx wrangler secret put GMAIL_SENDER          # the Gmail address, e.g. mypasal@gmail.com
+
+When all four exist, Gmail is used; otherwise Resend if its key exists; otherwise nothing is sent and the API says the email service is not ready.
+The scope can only send mail. It cannot read the mailbox.
+
+## Admin page
+The web app has a separate page at `/admin` (for example `https://pocket-pasal.dahal-khani.workers.dev/admin`). Open it and type the `ADMIN_KEY`.
+It shows numbers, closing requests (approve or reject with a note), shops (search, set plan), support tickets, and a button to erase shops whose date has come.
+The key is kept only in that browser tab. Ten wrong keys from one address lock that address for 15 minutes. The page is not indexed and is never saved for offline use.
+
+## Closing an account
+An owner sends a request from *More > Close account / leave* with a reason and their password.
+You approve or reject it in the admin page (aim: within 7 days). An approved deletion is carried out 14 days later by the daily job
+(or by *Run due deletions now*), and the owner can cancel before that. Stopping only the paid plan takes effect when you approve it.
+After erasing, the request row stays with its reason and dates, but the email and shop name are removed. Data on the owner's phone is not touched.
 
 ## Endpoints
 | | |
@@ -35,7 +69,10 @@ Then build the app with `VITE_API_URL=https://<your-worker>.workers.dev npm run 
 | `POST /sync/push`, `GET /sync/pull?since=` | change feed, 100 per push, 300 per pull |
 | `GET /sync/conflicts`, `POST /sync/conflicts/:id/resolve` | duplicate bill numbers / barcodes for the owner to check |
 | `POST /support` | trouble report from the app |
+| `GET/POST /account/closure`, `POST /account/closure/cancel` | owner asks to delete the account or stop the plan; sees the status; cancels |
+| `GET /admin/stats`, `/admin/shops`, `/admin/tickets`, `/admin/closures` | the admin page's lists (`x-admin-key` header) |
 | `POST /admin/plan` | you set a shop to pro/max after you receive payment (`x-admin-key` header) |
+| `POST /admin/closures/:id/approve` or `/reject`, `POST /admin/run-deletions` | decide a closing request; erase shops that are due |
 
 Set a shop's plan by hand until the eSewa / Khalti / Fonepay payment hooks exist:
 

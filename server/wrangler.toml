@@ -17,6 +17,8 @@ MAIL_FROM = "Pocket Pasal <onboarding@resend.dev>"
 DEV_RETURN_OTP = "0"
 ENABLE_MOCK_PAY = "0"
 MAIL_DAILY_LIMIT = "100"
+# Where new closure requests are announced (leave empty to skip)
+ADMIN_EMAIL = ""
 # The public address of this API once deployed, for example https://pasal-api.yourname.workers.dev
 PUBLIC_URL = "https://pocket-pasal-api.dahal-khani.workers.dev"
 
@@ -25,3 +27,8 @@ PUBLIC_URL = "https://pocket-pasal-api.dahal-khani.workers.dev"
 #   ADMIN_KEY       key for /admin/* routes (you, the seller)
 #   RESEND_API_KEY  API key from resend.com to send OTP emails
 #   SECRETS_KEY     long random string that encrypts shops' Khalti / eSewa keys
+#   GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN, GMAIL_SENDER   send email from a Gmail account (no domain needed, see README)
+
+[triggers]
+# Daily at 03:17 UTC: erase accounts whose approved closure request has reached its date.
+crons = ["17 3 * * *"]

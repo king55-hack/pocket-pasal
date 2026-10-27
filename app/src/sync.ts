@@ -105,6 +105,7 @@ async function run(): Promise<SyncResult> {
       const paid = me.shop.paidPlan as Settings['plan']
       await kvSet('settings', { ...s, plan: paid, planUntil: me.shop.planUntil, trialEnds: me.shop.trialEnds })
     }
+    try { await kvSet('closure', (await authed('/account/closure')).request) } catch { /* keep the last known state */ }
     const cf = await authed('/sync/conflicts')
     await kvSet('conflicts', cf.conflicts)
     return out

@@ -6,7 +6,7 @@ import { PLANREQ } from '../logic'
 import type { Invoice, Item } from '../types'
 
 export function Home() {
-  const { t, m, n, go, own, on, s, user, trialDays, plan, pending, cloud, perms } = useApp()
+  const { t, m, n, go, own, on, s, user, trialDays, plan, pending, cloud, perms, date } = useApp()
   const today = startOfDay()
   const inv = useLiveQuery(() => db.invoices.where('at').aboveOrEqual(today).toArray(), [today], [] as Invoice[])
   const items = useLiveQuery(() => db.items.toArray(), [], [] as Item[])
@@ -19,6 +19,10 @@ export function Home() {
   const low = items.filter((i) => i.active && i.stock < i.minStock)
   const lockedTile = (k: string) => PLANREQ[k] && plan === 'free'
 
+  const closure = useLiveQuery(() => db.kv.get('closure'), [])?.v as { status: string; type: string; scheduledAt?: number } | null | undefined
+  const closing = own && closure && (closure.status === 'pending' || closure.status === 'approved') && (
+    <div className="note w" onClick={() => go('closeacct')} style={{ cursor: 'pointer' }}>🚪 {closure.status === 'approved' && closure.type === 'delete_account' && closure.scheduledAt ? t('खाता ' + date(closure.scheduledAt) + ' मा मेटिन्छ। रद्द गर्न थिच्नुस्।', 'Your account will be erased on ' + date(closure.scheduledAt) + '. Tap to cancel.') : t('खाता बन्द गर्ने अनुरोध जाँचिँदैछ। हेर्न थिच्नुस्।', 'Your closing request is being reviewed. Tap to see.')}</div>
+  )
   const noCloud = own && !cloud && (
     <div className="note w" onClick={() => go('cloud')} style={{ cursor: 'pointer' }}>☁ {t('डाटा यही फोनमा मात्र छ। फोन हरायो भने जान्छ। क्लाउड जोड्न थिच्नुस्।', 'Your data is on this phone only and is lost if the phone is lost. Tap to connect the cloud.')}</div>
   )
@@ -40,7 +44,7 @@ export function Home() {
         <button className="tile l" onClick={() => go(own || perms.books ? 'books' : 'bills')}><span>📊</span>{t('आजको हिसाब', 'Today')}</button>
         <button className="tile l" onClick={() => go('more')}><span>➕</span>{t('अरू', 'More')}</button>
       </div>
-      {lowNote}{noCloud}{trial}
+      {lowNote}{closing}{noCloud}{trial}
     </div>
   )
   return (

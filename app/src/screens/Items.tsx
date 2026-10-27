@@ -4,6 +4,7 @@ import { useApp } from '../ctx'
 import { db, uid } from '../db'
 import { addCategory, adjustStock, FREE_ITEM_LIMIT, ranked, removeCategory, saveCategory, saveItem } from '../logic'
 import { Photo, Scanner } from '../components'
+import { enrichSampleItems, fetchPhoto, lookupBarcode, sampleItemsToEnrich, validCode } from '../off'
 import { compressImage, ITEM_PHOTO } from '../images'
 import type { Category, Item, Party } from '../types'
 
@@ -45,6 +46,15 @@ export function Items() {
   const [low, setLow] = useState(false)
   const [limit, setLimit] = useState(PAGE)
   const list = useMemo(() => ranked(items, q).filter((i) => (q ? true : inCategory(i, cat, cats)) && (!low || i.stock < i.minStock)), [items, q, cat, cats, low])
+  const icons = useMemo(() => new Map(cats.map((c) => [c.id, c.icon])), [cats])
+  const todo = useLiveQuery(() => sampleItemsToEnrich(), [items], 0)
+  const [online2, setBusyOff] = useState(false)
+  async function fillFromWeb() {
+    setBusyOff(true)
+    const n2 = await enrichSampleItems()
+    setBusyOff(false)
+    toast(n2 ? t(n2 + ' सामानमा फोटो/बारकोड थपियो', n2 + ' items got a photo or barcode') : t('कुनै थपिएन। इन्टरनेट जाँच्नुस् वा पछि प्रयास गर्नुस्।', 'Nothing was added. Check the internet or try later.'))
+  }
   const lowCount = items.filter((i) => i.active && i.stock < i.minStock).length
   const addNew = () => {
     if (plan === 'free' && items.length >= FREE_ITEM_LIMIT) { toast(t('फ्री प्लानमा १०० सामानसम्म', 'Free plan allows 100 items')); go('upgrade', { f: 'books' }); return }
@@ -58,11 +68,12 @@ export function Items() {
       <div className="row wrap"><button className={'pill' + (!low ? ' on' : '')} onClick={() => { setLow(false); setLimit(PAGE) }}>{t('सबै', 'All')} {n(items.filter((i) => i.active).length)}</button>
         <button className={'pill' + (low ? ' on' : '')} onClick={() => { setLow(true); setLimit(PAGE) }}>{t('स्टक कम', 'Low stock')} {n(lowCount)}</button>
         {perms.editItems && <button className="pill" onClick={() => go('categories')}>🗂 {t('वर्ग मिलाउनुस्', 'Manage categories')}</button>}</div>
+      {perms.editItems && todo > 0 && <button className="btn o" disabled={online2} onClick={fillFromWeb}>🌐 {online2 ? '…' : t('नामी सामानमा फोटो र बारकोड थप्नुस् (इन्टरनेट चाहिन्छ)', 'Add photos and barcodes to well-known items (needs internet)')}</button>}
       <div className="mut" style={{ fontSize: 13 }}>{t('🔥 धेरै बिक्री हुने सामान माथि। रोमन अक्षरमा पनि खोज्न मिल्छ (जस्तै: chini, tel, wai).', '🔥 Best sellers on top. You can also search with Roman letters, such as chini, tel or wai.')}</div>
       {list.length === 0 && <div className="note">{t('सामान भेटिएन।', 'No items found.')}</div>}
       {list.slice(0, limit).map((i) => (
         <button key={i.id} className={'item tap' + (i.stock < i.minStock ? ' low' : '')} onClick={() => perms.editItems && go('itemedit', { id: i.id })}>
-          <Photo src={i.photo} />
+          <Photo src={i.photo} icon={i.categoryId ? icons.get(i.categoryId) : undefined} />
           <div style={{ flex: 1, minWidth: 0 }}><b>{t(i.nameNe, i.nameEn)}</b>
             <small>{m(i.price)}{perms.viewCost ? ' · ' + t('लागत', 'cost') + ' ' + m(i.cost) : ''} · {i.sold >= 100 ? '🔥 ' : ''}{t('बिक्री', 'sold')} {n(i.sold)}</small>
             {i.stock < i.minStock && <small className="w">{t('स्टक कम', 'Low stock')} ({t('न्यूनतम', 'min')} {n(i.minStock)})</small>}</div>
@@ -83,13 +94,15 @@ export function ItemEdit({ id }: { id?: string }) {
   const [scan, setScan] = useState(false)
   const [adj, setAdj] = useState('')
   const [photoBusy, setPhotoBusy] = useState(false)
+  const [looking, setLooking] = useState(false)
+  const [found, setFound] = useState('')
   const [newCat, setNewCat] = useState('')
   const file = useRef<HTMLInputElement>(null)
   const it: Item = f ?? existing ?? { id: uid(), nameNe: '', nameEn: '', price: 0, cost: 0, stock: 0, minStock: 5, unit: 'pcs', vat: s.vatRegistered, sold: 0, active: true }
-  if (id && !existing && !f) return <div className="body" />
   // The photo is shrunk after the person picks it, which takes a moment. Reading the latest values when it finishes keeps what was typed in the meantime.
   const latest = useRef(it)
   latest.current = it
+  if (id && !existing && !f) return <div className="body" />
   const set = (p: Partial<Item>) => setF({ ...latest.current, ...p })
   const num = (k: keyof Item) => (e: React.ChangeEvent<HTMLInputElement>) => set({ [k]: e.target.value === '' ? 0 : +e.target.value } as any)
 
@@ -107,6 +120,16 @@ export function ItemEdit({ id }: { id?: string }) {
     await adjustStock(id, sign * d, sign > 0 ? 'adjust+' : 'damage')
     setAdj(''); setF(null)
     toast(t('स्टक मिलाइयो', 'Stock updated'))
+  }
+  async function lookUp() {
+    setLooking(true); setFound('')
+    const p = await lookupBarcode((it.barcode ?? '').trim())
+    if (!p) { toast(t('यो बारकोड इन्टरनेटमा भेटिएन। आफैँ लेख्नुस्।', 'This barcode was not found online. Type it in yourself.')); setLooking(false); return }
+    const img = it.photo || !p.image ? undefined : await fetchPhoto(p.image)
+    const label = [p.brand, p.name, p.quantity].filter(Boolean).join(' · ')
+    set({ ...(it.nameEn ? {} : { nameEn: p.name }), ...(it.nameNe ? {} : { nameNe: p.name }), ...(img ? { photo: img } : {}) })
+    setFound(label)
+    setLooking(false)
   }
   async function makeCat() {
     if (!newCat.trim()) return
@@ -134,6 +157,10 @@ export function ItemEdit({ id }: { id?: string }) {
         <label className="f g">{t('बारकोड', 'Barcode')}<input className="in" inputMode="numeric" value={it.barcode ?? ''} onChange={(e) => set({ barcode: e.target.value })} /></label>
         {on('barcode') && <button className="btn s" style={{ alignSelf: 'flex-end' }} onClick={() => setScan(!scan)}>▮▮</button>}</div>
       {scan && <Scanner onClose={() => setScan(false)} onCode={(c) => { set({ barcode: c }); setScan(false) }} />}
+      {validCode((it.barcode ?? '').trim()) && (<>
+        <button className="btn o" disabled={looking} onClick={lookUp}>🌐 {looking ? '…' : t('बारकोडबाट नाम र फोटो खोज्नुस्', 'Find name and photo from the barcode')}</button>
+        {found && <div className="note">{t('भेटियो: ', 'Found: ')}<b>{found}</b><div className="mut" style={{ fontSize: 12 }}>{t('स्रोत: Open Food Facts (स्वयंसेवकले बनाएको सूची)। आफ्नो प्याकसँग मिलाएर हेर्नुस्।', 'Source: Open Food Facts (a list made by volunteers). Check it against your pack.')}</div></div>}
+      </>)}
       {on('vat') && s.vatRegistered && <div className="toggle"><span>{t('भ्याट लाग्ने', 'VAT applies')}</span><button className={'sw' + (it.vat ? ' on' : '')} aria-label="vat" onClick={() => set({ vat: !it.vat })} /></div>}
       {suppliers.length > 0 && <label className="f">{t('आपूर्तिकर्ता', 'Supplier')}<select className="in" value={it.supplierId ?? ''} onChange={(e) => set({ supplierId: e.target.value || undefined })}><option value="" />{suppliers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
       {id && (<><div className="h">{t('स्टक मिलाउनुस् (गन्ती / बिग्रेको)', 'Adjust stock (count / damaged)')}</div>

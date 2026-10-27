@@ -89,7 +89,7 @@ r = await call('/auth/refresh', { method: 'POST', body: { refresh: Bt2.refresh }
 
 // support + admin plan
 r = await call('/support', { method: 'POST', token: A.access, body: { category: 'bug', message: 'test', meta: { v: 1 } } }); ok(r.s === 200 && r.j.ticket, 'support ticket stored')
-r = await call('/admin/plan', { method: 'POST', body: { email, plan: 'pro', days: 30 }, headers: { 'x-admin-key': 'nope' } }); ok(r.s === 403, 'admin route needs the key')
+r = await call('/admin/plan', { method: 'POST', body: { email, plan: 'pro', days: 30 }, headers: { 'x-admin-key': 'nope', 'CF-Connecting-IP': '198.51.100.' + (Date.now() % 200 + 1) } }); ok(r.s === 403, 'admin route needs the key')
 r = await call('/admin/plan', { method: 'POST', body: { email, plan: 'pro', days: 30 }, headers: { 'x-admin-key': ADMIN } }); ok(r.s === 200 && r.j.shop.paidPlan === 'pro', 'seller can set a paid plan')
 
 // OTP rate limit (5 per hour)

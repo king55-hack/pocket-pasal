@@ -1,8 +1,10 @@
 import react from '@vitejs/plugin-react'
+import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  build: { rollupOptions: { input: { main: resolve(__dirname, 'index.html'), admin: resolve(__dirname, 'admin.html') } } },
   plugins: [
     react(),
     VitePWA({
@@ -24,7 +26,8 @@ export default defineConfig({
           { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: { navigateFallback: '/index.html' },
+      // the admin page is its own page: never kept offline, never taken over by the shop app
+      workbox: { navigateFallback: '/index.html', navigateFallbackDenylist: [/^\/admin/], globIgnores: ['**/admin*'] },
     }),
   ],
 })

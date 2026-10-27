@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from 'react'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, kvGet, kvSet } from './db'
+import { activeDb, rememberShop } from './shops'
 import { fmtDate, fmtTime, neDigits } from './format'
 import { PLANREQ, RANK } from './logic'
 import { SHARED_SETTINGS, syncNow, touchSettings, type SyncResult } from './sync'
@@ -82,6 +83,7 @@ export function Provider({ children }: { children: ReactNode }) {
     const st = await kvGet<Settings | null>('settings', null)
     if (st) setS({ ...DEFAULTS, ...st, mod: { ...DEFAULTS.mod, ...st.mod } })
     setHasShop(!!st?.shopName)
+    if (st?.shopName) rememberShop(activeDb(), st.shopName)
   }, [])
   useEffect(() => { refresh().then(() => setReady(true)) }, [refresh])
   useEffect(() => {
@@ -93,7 +95,9 @@ export function Provider({ children }: { children: ReactNode }) {
   const save = useCallback(async (p: Partial<Settings>) => {
     const shared = SHARED_SETTINGS.some((k) => k in p)
     const next = { ...s, ...p, ...(shared ? { updatedAt: Date.now() } : {}) }
+    try { localStorage.setItem('pasal-lang', next.lang) } catch { /* private mode */ }
     setS(next); setHasShop(!!next.shopName)
+    if (next.shopName) rememberShop(activeDb(), next.shopName)
     await kvSet('settings', next)
     if (shared && next.shopName) await touchSettings()
   }, [s])

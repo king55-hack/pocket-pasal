@@ -36,6 +36,7 @@ export function Sale() {
   const [limit, setLimit] = useState(PAGE)
   const [scan, setScan] = useState(false)
   const list = useMemo(() => ranked(items, q).filter((i) => (q ? true : inCategory(i, cat, cats))), [items, q, cat, cats])
+  const icons = useMemo(() => new Map(cats.map((c) => [c.id, c.icon])), [cats])
 
   const add = (id: string) => {
     const it = byId.get(id)
@@ -56,20 +57,20 @@ export function Sale() {
     <div className="body">
       {/* The cart sits on top so it stays in view however long the item list is. */}
       {lines.length > 0 && (
-        <div className="st" style={{ flex: 'none', padding: 8 }}>
+        <div className="cart">
+          <div className="cart-head"><span>🛒 {t('कार्ट', 'Cart')} · {n(lines.reduce((a2, l) => a2 + l.qty, 0))} {t('सामान', 'items')}</span><span>{m(tot.total)}</span></div>
           {lines.map((l) => (
-            <div key={l.itemId} className="row" style={{ padding: '6px 4px', borderBottom: '1px solid var(--line)' }}>
-              <div className="g"><b>{t(l.it.nameNe, l.it.nameEn)}</b><small className="mut" style={{ display: 'block' }}>{m(l.rate)} × {n(l.qty)}</small></div>
-              <div className="qty"><button onClick={() => dec(l.itemId)}>−</button><b>{n(l.qty)}</b><button onClick={() => add(l.itemId)}>+</button></div>
-              <b style={{ minWidth: 64, textAlign: 'right' }}>{m(l.qty * l.rate)}</b>
+            <div key={l.itemId} className="cart-line">
+              <div className="nm">{t(l.it.nameNe, l.it.nameEn)}<small>{m(l.rate)} × {n(l.qty)}</small></div>
+              <div className="qty"><button aria-label="less" onClick={() => dec(l.itemId)}>−</button><b>{n(l.qty)}</b><button aria-label="more" onClick={() => add(l.itemId)}>+</button></div>
+              <div className="amt">{m(l.qty * l.rate)}</div>
             </div>
           ))}
           {taxOK && <div className="row" style={{ marginTop: 8 }}><span className="mut">{t('बिलको प्रकार', 'Bill type')}</span>
             <button className={'pill' + (effKind === 'tax' ? ' on' : '')} onClick={() => setKind('tax')}>{t('कर बीजक', 'Tax invoice')}</button>
             <button className={'pill' + (effKind === 'cash' ? ' on' : '')} onClick={() => setKind('cash')}>{t('नगद भरपाई', 'Cash receipt')}</button></div>}
-          <div className="tot" style={{ marginTop: 8 }}><span>{t('उप-जम्मा', 'Subtotal')}</span><span>{m(tot.subtotal)}</span></div>
-          {effKind === 'tax' && <div className="tot"><span>{t('भ्याट (१३%)', 'VAT (13%)')}</span><span>{m(tot.vat)}</span></div>}
-          <div className="tot b"><span>{t('कुल', 'Total')}</span><span>{m(tot.total)}</span></div>
+          {effKind === 'tax' && <div className="tot" style={{ marginTop: 8, fontSize: 15 }}><span>{t('उप-जम्मा', 'Subtotal')} {m(tot.subtotal)}</span><span>{t('भ्याट (१३%)', 'VAT (13%)')} {m(tot.vat)}</span></div>}
+          <div className="cart-total"><span>{t('कुल', 'Total')}</span><span>{m(tot.total)}</span></div>
         </div>
       )}
       <div className="row">
@@ -85,7 +86,7 @@ export function Sale() {
         {list.length === 0 && <div className="note" style={{ gridColumn: '1/-1' }}>{t('यो नामको सामान भेटिएन।', 'No item found.')}</div>}
         {list.slice(0, limit).map((i) => (
           <button key={i.id} className="card" onClick={() => add(i.id)}>
-            <Photo src={i.photo} />
+            <Photo src={i.photo} icon={i.categoryId ? icons.get(i.categoryId) : undefined} />
             <b>{t(i.nameNe, i.nameEn)}</b>
             <small>{m(i.price)} · {t('स्टक', 'stock')} {n(i.stock)}</small>
             <small>{i.sold >= 100 ? '🔥 ' : ''}{t('बिक्री', 'sold')} {n(i.sold)}</small>

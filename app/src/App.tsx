@@ -8,6 +8,8 @@ import { Books, Bills, Buy, Orders, Returns } from './screens/Books'
 import { CloudScreen } from './screens/Cloud'
 import { Categories } from './screens/Items'
 import { PayConf } from './screens/PayConf'
+import { ShopsScreen } from './screens/Shops'
+import { CloseAccount } from './screens/CloseAccount'
 import { Cctv, Delivery, More, Plans, Settings, Staff, Support, Sync, Upgrade } from './screens/More'
 import { useState } from 'react'
 import type { Perms } from './types'
@@ -17,7 +19,7 @@ const TITLES: Record<string, [string, string]> = {
   items: ['सामान', 'Items'], itemedit: ['सामान', 'Item'], buy: ['खरिद', 'Purchase'], parties: ['पार्टी', 'Parties'], ledger: ['लेजर', 'Ledger'],
   books: ['खाता', 'Books'], bills: ['मेरा बिल', 'My bills'], returns: ['फिर्ता', 'Returns'], orders: ['अर्डर', 'Orders'], more: ['थप', 'More'],
   settings: ['सेटिङ', 'Settings'], plans: ['प्लान र सदस्यता', 'Plans'], upgrade: ['प्लान चाहिन्छ', 'Upgrade'], staff: ['कर्मचारी', 'Staff'],
-  sync: ['सिंक', 'Sync'], cloud: ['क्लाउड खाता', 'Cloud account'], categories: ['सामानका वर्ग', 'Item categories'], payconf: ['QR भुक्तानी', 'QR payments'], support: ['समस्या जानकारी', 'Report an issue'], cctv: ['क्यामेरा', 'CCTV'], delivery: ['डेलिभरी', 'Delivery'],
+  sync: ['सिंक', 'Sync'], cloud: ['क्लाउड खाता', 'Cloud account'], categories: ['सामानका वर्ग', 'Item categories'], shops: ['व्यवसाय', 'Businesses'], closeacct: ['खाता बन्द', 'Close account'], payconf: ['QR भुक्तानी', 'QR payments'], support: ['समस्या जानकारी', 'Report an issue'], cctv: ['क्यामेरा', 'CCTV'], delivery: ['डेलिभरी', 'Delivery'],
 }
 const HELP: Record<string, [string, string]> = {
   home: ['"बेच्नुस्" थिचेर बिक्री सुरु गर्नुस्।', 'Tap "Sell" to start a sale.'],
@@ -29,7 +31,7 @@ const HELP: Record<string, [string, string]> = {
   returns: ['फिर्ता हुने बिल छान्नुस्, अनि सामान छान्नुस्।', 'Pick the bill, then pick the items coming back.'],
   done: ['प्रिन्टर जोडिएको छैन भने "शेयर" वा PDF प्रयोग गर्नुस्।', 'No printer? Use Share or PDF.'],
 }
-const OWNER_ONLY = ['cloud', 'payconf', 'settings', 'plans', 'staff', 'delivery']
+const OWNER_ONLY = ['cloud', 'payconf', 'closeacct', 'settings', 'plans', 'staff', 'delivery']
 /** Screens a staff member needs a permission for. The owner has every permission. */
 const NEEDS: Record<string, (p: Perms) => boolean> = {
   sale: (p) => p.sell, pay: (p) => p.sell, books: (p) => p.books, buy: (p) => p.purchase, orders: (p) => p.orders,
@@ -85,6 +87,8 @@ export default function App() {
       case 'sync': return <Sync />
       case 'cloud': return <CloudScreen />
       case 'categories': return <Categories />
+      case 'shops': return <ShopsScreen />
+      case 'closeacct': return <CloseAccount />
       case 'payconf': return <PayConf />
       case 'support': return <Support />
       case 'cctv': return <Cctv />
