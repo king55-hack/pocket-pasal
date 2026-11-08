@@ -6,8 +6,8 @@ Runs in any browser and installs on Android like an app (a PWA). Nepali first, E
 > All rights reserved. This repository is public so the work can be read and checked. It is not licensed for reuse or resale.
 
 ## Live
-- App: https://pocket-pasal.dahal-khani.workers.dev (open it on Android Chrome, menu, Install app)
-- API: https://pocket-pasal-api.dahal-khani.workers.dev
+- App: https://pasal.rajanrimal.com.np (open it on Android Chrome, menu, Install app)
+- API: https://pasal-api.rajanrimal.com.np
 - The app works fully on the phone without the server. Cloud sync and login need the email sender (Resend) to be connected first, see below.
 
 ## What it does

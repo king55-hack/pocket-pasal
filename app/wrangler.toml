@@ -1,6 +1,9 @@
 name = "pocket-pasal"
 compatibility_date = "2025-09-01"
 
+# Own address for the web app (Cloudflare creates the DNS record and certificate). The workers.dev address keeps working.
+routes = [{ pattern = "pasal.rajanrimal.com.np", custom_domain = true }]
+
 # The built web app. _headers (written by scripts/make-headers.mjs) sets the content security policy.
 [assets]
 directory = "./dist"

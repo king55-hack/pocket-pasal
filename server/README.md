@@ -47,7 +47,7 @@ When all four exist, Gmail is used; otherwise Resend if its key exists; otherwis
 The scope can only send mail. It cannot read the mailbox.
 
 ## Admin page
-The web app has a separate page at `/admin` (for example `https://pocket-pasal.dahal-khani.workers.dev/admin`). Open it and type the `ADMIN_KEY`.
+The web app has a separate page at `/admin` (for example `https://pasal.rajanrimal.com.np/admin`). Open it and type the `ADMIN_KEY`.
 It shows numbers, closing requests (approve or reject with a note), shops (search, set plan), support tickets, and a button to erase shops whose date has come.
 The key is kept only in that browser tab. Ten wrong keys from one address lock that address for 15 minutes. The page is not indexed and is never saved for offline use.
 
