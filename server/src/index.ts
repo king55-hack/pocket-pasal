@@ -66,8 +66,8 @@ async function issueOtp(env: Env, email: string, purpose: 'signup' | 'login') {
   const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).padStart(6, '0')
   await env.DB.prepare('INSERT INTO otps (email,purpose,code_hash,expires,created_at) VALUES (?,?,?,?,?)')
     .bind(email, purpose, await sha256(`${code}:${email}:${env.JWT_SECRET}`), now + 10 * 60_000, now).run()
-  const m = otpMail(code)
-  const sent = await sendMail(env, email, m.subject, m.text)
+  const m = otpMail(code, env.APP_URL)
+  const sent = await sendMail(env, email, m.subject, m.text, { html: m.html })
   if (!sent && env.DEV_RETURN_OTP !== '1') {
     // No way to deliver the code: say so now instead of leaving the person waiting for an email that will never come.
     await env.DB.prepare('DELETE FROM otps WHERE email=? AND created_at=?').bind(email, now).run()

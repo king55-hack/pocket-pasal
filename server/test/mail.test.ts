@@ -101,3 +101,22 @@ describe('sending', () => {
     expect(f).not.toHaveBeenCalled()
   })
 })
+
+describe('designed email', () => {
+  it('sends plain text and a designed version together, and the text stays readable', async () => {
+    const { otpMail } = await import('../src/mail')
+    const m = otpMail('123456')
+    const mime = buildMime({ from: 'a@gmail.com', to: 'b@example.com', subject: m.subject, text: m.text, html: m.html })
+    expect(mime).toContain('multipart/alternative')
+    expect(mime).toContain('Content-Type: text/html; charset=UTF-8')
+    const htmlPart = /text\/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n([\s\S]*?)\r\n--pa_/.exec(mime)![1]
+    expect(unb64(htmlPart).toString('utf8')).toContain('>123456<')
+    expect(mime).toContain('Content-Type: text/plain; charset=UTF-8')
+  })
+  it('never lets message text become page elements', async () => {
+    const { textToHtml } = await import('../src/emailHtml')
+    const out = textToHtml('<script>alert(1)</script> & "x"')
+    expect(out).not.toContain('<script>')
+    expect(out).toContain('&lt;script&gt;')
+  })
+})
