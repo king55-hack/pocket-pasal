@@ -25,9 +25,9 @@ const claims = { sub: 'x', shop: 'x', dev: 'x', exp: Math.floor(Date.now() / 100
 r = await call('/me', { token: jwt(claims, 'dev-only-secret-change-me-0123456789abcdef') }); ok(r.s === 401, 'a token signed with the well-known test secret is refused (production has its own secret)')
 r = await call('/admin/plan', { method: 'POST', body: { email: 'a@b.co', plan: 'max' }, headers: { 'x-admin-key': 'dev-admin-key' } }); ok(r.s === 403, 'the well-known test admin key does not work')
 r = await call('/admin/plan', { method: 'POST', body: { email: 'a@b.co', plan: 'max' } }); ok(r.s === 403, 'admin route refuses a request with no key')
-r = await call('/auth/otp', { method: 'POST', body: { email: `smoke${Date.now()}@example.com`, purpose: 'signup' } })
+r = await call('/auth/otp', { method: 'POST', body: { email: `smoke${Date.now()}@example.com`, purpose: 'login' } }) // 'login' for an unknown address sends nothing, so this check never mails anyone
 ok(r.j.devCode === undefined, 'a login code is never returned in the response (test mode is off)')
-ok(r.s === 200 || (r.s === 503 && r.j.error === 'mail'), `code request ends cleanly (${r.s} ${r.j.error ?? 'sent'})`)
+ok(r.s === 200, `code request ends cleanly (${r.s})`)
 r = await call('/pay/go/mock/00000000-0000-0000-0000-000000000000'); ok(/Not available|has ended/.test(await (await fetch(API + '/pay/go/mock/00000000-0000-0000-0000-000000000000')).text()), 'the fake payment provider is switched off')
 r = await call('/nothing-here'); ok(r.s === 404 && r.j.error === 'not_found', 'unknown address gives a plain 404')
 r = await call('/auth/login', { method: 'POST', body: '{broken' }); ok(r.s === 400, 'broken request gives a plain 400')
